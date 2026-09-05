@@ -1,0 +1,176 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * TimeFlow design system — "Prismatic Glass Instrument".
+ * Instrument-grade light surface, glass panels, tabular numerals.
+ * All colors in oklch. Never hardcode colors in components.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-clock: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* instrument tokens */
+  --color-ink: var(--ink);
+  --color-mute: var(--mute);
+  --color-faint: var(--faint);
+  --color-paper: var(--paper);
+  --color-panel: var(--panel);
+  --color-rim: var(--rim);
+  --color-work: var(--work);
+  --color-rest: var(--rest);
+  --color-stop: var(--stop);
+  --color-oncolor: var(--oncolor);
+
+  --color-chart-1: var(--work);
+  --color-chart-2: var(--rest);
+  --color-chart-3: var(--stop);
+  --color-chart-4: var(--faint);
+  --color-chart-5: var(--ink);
+}
+
+:root {
+  --radius: 0.75rem;
+
+  --ink: oklch(0.277 0.022 265.8);
+  --mute: oklch(0.551 0.023 264.4);
+  --faint: oklch(0.713 0.024 260.7);
+  --paper: oklch(0.957 0.007 260.7);
+  --panel: oklch(1 0 0);
+  --rim: oklch(0.918 0.015 264.5);
+  --work: oklch(0.639 0.145 155.9);
+  --rest: oklch(0.718 0.145 73.9);
+  --stop: oklch(0.597 0.182 24.5);
+  --oncolor: oklch(1 0 0);
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--panel);
+  --card-foreground: var(--ink);
+  --popover: var(--panel);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--oncolor);
+  --secondary: var(--paper);
+  --secondary-foreground: var(--ink);
+  --muted: var(--paper);
+  --muted-foreground: var(--mute);
+  --accent: var(--paper);
+  --accent-foreground: var(--ink);
+  --destructive: var(--stop);
+  --destructive-foreground: var(--oncolor);
+  --border: var(--rim);
+  --input: var(--rim);
+  --ring: var(--faint);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Prismatic hairline rim used on every glass panel */
+@utility rim {
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      140deg,
+      rgba(255, 255, 255, 0.95),
+      rgba(147, 197, 253, 0.35) 42%,
+      rgba(196, 181, 253, 0.28) 66%,
+      rgba(252, 211, 77, 0.2)
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+}
+
+/* Ambient spectrum wash behind page headers */
+@utility spectrum {
+  background:
+    radial-gradient(60% 120% at 12% -10%, rgba(147, 197, 253, 0.35), transparent 60%),
+    radial-gradient(50% 120% at 88% -10%, rgba(196, 181, 253, 0.3), transparent 55%),
+    radial-gradient(40% 100% at 55% -20%, rgba(252, 211, 77, 0.18), transparent 60%);
+}
+
+@keyframes tickpulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+}
+
+@keyframes dotpulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--work) 45%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+@utility tick {
+  animation: tickpulse 1s ease-in-out infinite;
+}
+
+@utility dotwork {
+  animation: dotpulse 1.6s ease-out infinite;
+}
