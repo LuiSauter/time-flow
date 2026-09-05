@@ -1,9 +1,9 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
-import type { Request } from 'express';
 import { AuthService } from './auth.service.js';
 import { AuthGuard } from './auth.guard.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
+import type { AuthenticatedRequest } from './auth.types.js';
 
 @Controller('auth')
 export class AuthController {
@@ -21,7 +21,7 @@ export class AuthController {
 
   @Get('check-token')
   @UseGuards(AuthGuard)
-  checkToken(@Req() request: Request & { user?: unknown }) {
+  checkToken(@Req() request: AuthenticatedRequest) {
     return { user: request.user };
   }
 }

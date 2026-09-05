@@ -2,6 +2,7 @@ import { JwtService } from '@nestjs/jwt';
 import type { ExecutionContext } from '@nestjs/common';
 import { AppError, ErrorCode } from '../common/errors/errors.js';
 import { AuthGuard } from './auth.guard.js';
+import type { AuthenticatedRequest } from './auth.types.js';
 
 function contextWithHeaders(headers: Record<string, string>): ExecutionContext {
   const request = { headers } as { headers: Record<string, string>; user?: unknown };
@@ -37,6 +38,9 @@ describe('AuthGuard', () => {
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
     expect(jwt.verifyAsync).toHaveBeenCalledWith('valid');
-    expect((context.switchToHttp().getRequest() as { user?: unknown }).user).toEqual(payload);
+    const request = context.switchToHttp().getRequest() as AuthenticatedRequest;
+    expect(request.user).toEqual(payload);
+    expect(request.user.sub).toBe('user-id');
+    expect(request.user.email).toBe('diego@example.com');
   });
 });

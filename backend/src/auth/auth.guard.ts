@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AppError, ErrorCode } from '../common/errors/errors.js';
+import type { AuthJwtPayload } from './auth.types.js';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -13,7 +14,7 @@ export class AuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<{
       headers: { authorization?: string };
-      user?: unknown;
+      user?: AuthJwtPayload;
     }>();
     const authorization = request.headers.authorization;
     const token = authorization?.startsWith('Bearer ')
@@ -25,7 +26,7 @@ export class AuthGuard implements CanActivate {
     }
 
     try {
-      request.user = await this.jwt.verifyAsync(token);
+      request.user = await this.jwt.verifyAsync<AuthJwtPayload>(token);
       return true;
     } catch {
       throw this.unauthorized();
