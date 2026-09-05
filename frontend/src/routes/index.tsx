@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { Plus } from "lucide-react";
 import { AppShell, PageHeading, Segmented } from "@/components/AppShell";
 import { useTimeTracker } from "@/hooks/useTimeTracker";
-import { PROJECTS, clockOf, hm, hms, longDate } from "@/lib/tracker";
+import { useProjects } from "@/hooks/useProjects";
+import { clockOf, hm, hms, longDate } from "@/lib/tracker";
+import type { ManualEntryInput } from "@/lib/tracker";
 import { requirePrivateSession } from "@/lib/route-guard";
 
 export const Route = createFileRoute("/")({
@@ -69,15 +71,28 @@ function MetricCard({
   );
 }
 
-function TrackerPage() {
-  const [projectId, setProjectId] = useState(PROJECTS[0]!.id);
+export function TrackerPage() {
+  const { activeProject, activeProjectId } = useProjects();
   const [dayFilter, setDayFilter] = useState("habiles");
-  const tracker = useTimeTracker(projectId);
-  const project = PROJECTS.find((p) => p.id === projectId)!;
-
+  const previousDayScope = dayFilter === "todos" ? "all" : "business";
+  const tracker = useTimeTracker(activeProjectId ?? "", previousDayScope);
+  const project = activeProject;
   const today = useMemo(() => new Date(), []);
-  const workMinutes = tracker.totals.workSeconds / 60;
-  const goalRatio = workMinutes / project.dailyGoalMinutes;
+
+  if (!project) {
+    return (
+      <AppShell projectId="" onProjectChange={() => undefined}>
+        <div className="rounded-[16px] bg-panel/60 p-6 text-[13px] text-mute">
+          Cargando proyecto...
+        </div>
+      </AppShell>
+    );
+  }
+
+  const workMinutes = (tracker.metrics?.workSeconds ?? tracker.totals.workSeconds) / 60;
+  const breakMinutes = (tracker.metrics?.breakSeconds ?? tracker.totals.breakSeconds) / 60;
+  const goalMinutes = tracker.metrics?.dailyGoalMinutes ?? project.dailyGoalMinutes;
+  const goalRatio = workMinutes / goalMinutes;
 
   const badge =
     tracker.status === "WORKING"
@@ -94,7 +109,7 @@ function TrackerPage() {
   const [hh, mm, ss] = mainClock.split(":");
 
   return (
-    <AppShell projectId={projectId} onProjectChange={setProjectId}>
+    <AppShell projectId={project.id} onProjectChange={() => undefined}>
       <PageHeading
         eyebrow="Hoy"
         title={longDate(today)}
@@ -114,7 +129,11 @@ function TrackerPage() {
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetricCard label="Ayer" value="6h 45m" hint="Cumplió meta" />
+        <MetricCard
+          label="Ayer"
+          value={hm((tracker.previousDay?.activeSeconds ?? 0) / 60)}
+          hint={tracker.previousDay?.goalMet ? "Cumplió meta" : "No cumplió meta"}
+        />
         <MetricCard
           label="Hoy · en curso"
           value={hm(workMinutes)}
@@ -123,13 +142,13 @@ function TrackerPage() {
         />
         <MetricCard
           label="Descanso hoy"
-          value={hm(tracker.totals.breakSeconds / 60)}
+          value={hm(breakMinutes)}
           tone="rest"
           hint={`${tracker.segments.filter((s) => s.kind === "break").length} pausas registradas`}
         />
         <MetricCard
           label="Límite diario"
-          right={hm(project.dailyGoalMinutes)}
+          right={hm(goalMinutes)}
           value={hm(workMinutes)}
           progress={goalRatio}
         />
@@ -170,6 +189,7 @@ function TrackerPage() {
             {tracker.status === "IDLE" ? (
               <button
                 onClick={tracker.startWork}
+                disabled={tracker.isPending}
                 className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-work text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
               >
                 Comenzar a Trabajar
@@ -180,12 +200,14 @@ function TrackerPage() {
               <>
                 <button
                   onClick={tracker.startBreak}
+                  disabled={tracker.isPending}
                   className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-rest text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
                 >
                   Iniciar Descanso
                 </button>
                 <button
                   onClick={tracker.finishDay}
+                  disabled={tracker.isPending}
                   className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-stop text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
                 >
                   Finalizar Jornada y Guardar
@@ -197,12 +219,14 @@ function TrackerPage() {
               <>
                 <button
                   onClick={tracker.startWork}
+                  disabled={tracker.isPending}
                   className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-work text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
                 >
                   Reanudar Trabajo
                 </button>
                 <button
                   onClick={tracker.finishDay}
+                  disabled={tracker.isPending}
                   className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-stop text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
                 >
                   Finalizar Jornada y Guardar
@@ -218,6 +242,12 @@ function TrackerPage() {
           </div>
         </div>
       </section>
+
+      {tracker.error ? (
+        <p role="alert" className="text-[13px] text-stop">
+          {tracker.error}
+        </p>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="rim overflow-hidden rounded-[16px] bg-panel/60 ring-1 ring-black/5 backdrop-blur-sm lg:col-span-2">
@@ -272,28 +302,60 @@ function TrackerPage() {
   );
 }
 
-function ManualEntryCard({ onAdd }: { onAdd: (start: number, end: number) => void }) {
+export function ManualEntryCard({
+  onAdd,
+}: {
+  onAdd: (input: ManualEntryInput) => Promise<unknown>;
+}) {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [from, setFrom] = useState("15:30");
   const [to, setTo] = useState("16:15");
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const submit = () => {
-    const start = new Date(`${date}T${from}:00`).getTime();
-    const end = new Date(`${date}T${to}:00`).getTime();
-    if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return;
-    onAdd(start, end);
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!date || !from || !to) {
+      setError("Completa todos los campos");
+      return;
+    }
+    if (to <= from) {
+      setError("La hora de fin debe ser posterior a la de inicio");
+      return;
+    }
+
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      await onAdd({ date, startTime: from, endTime: to });
+    } catch (submissionError) {
+      setError(
+        submissionError instanceof Error
+          ? submissionError.message
+          : "No se pudo guardar el registro",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="rim flex flex-col rounded-[16px] bg-panel/60 p-5 ring-1 ring-black/5 backdrop-blur-sm">
+    <form
+      onSubmit={submit}
+      className="rim flex flex-col rounded-[16px] bg-panel/60 p-5 ring-1 ring-black/5 backdrop-blur-sm"
+    >
       <h2 className="text-[14px] font-semibold tracking-tight">Registro manual</h2>
       <p className="mt-1 max-w-[30ch] text-pretty text-[13px] text-mute">
         Captura horas que no se registraron en tiempo real. Sin límite de entradas.
       </p>
       <div className="mt-4 grid gap-2">
-        <label className="rounded-[10px] bg-paper px-3 py-2.5 ring-1 ring-black/5">
+        <label
+          htmlFor="manual-date"
+          className="rounded-[10px] bg-paper px-3 py-2.5 ring-1 ring-black/5"
+        >
           <span className="block text-[11px] font-medium text-faint">Fecha</span>
           <input
+            id="manual-date"
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
@@ -301,18 +363,26 @@ function ManualEntryCard({ onAdd }: { onAdd: (start: number, end: number) => voi
           />
         </label>
         <div className="grid grid-cols-2 gap-2">
-          <label className="rounded-[10px] bg-paper px-3 py-2.5 ring-1 ring-black/5">
+          <label
+            htmlFor="manual-start"
+            className="rounded-[10px] bg-paper px-3 py-2.5 ring-1 ring-black/5"
+          >
             <span className="block text-[11px] font-medium text-faint">Inicio</span>
             <input
+              id="manual-start"
               type="time"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
               className="w-full bg-transparent font-clock text-[13px] tabular-nums outline-none"
             />
           </label>
-          <label className="rounded-[10px] bg-paper px-3 py-2.5 ring-1 ring-black/5">
+          <label
+            htmlFor="manual-end"
+            className="rounded-[10px] bg-paper px-3 py-2.5 ring-1 ring-black/5"
+          >
             <span className="block text-[11px] font-medium text-faint">Fin</span>
             <input
+              id="manual-end"
               type="time"
               value={to}
               onChange={(e) => setTo(e.target.value)}
@@ -321,13 +391,19 @@ function ManualEntryCard({ onAdd }: { onAdd: (start: number, end: number) => voi
           </label>
         </div>
       </div>
+      {error ? (
+        <p role="alert" className="mt-3 text-[12px] text-stop">
+          {error}
+        </p>
+      ) : null}
       <button
-        onClick={submit}
-        className="mt-5 flex h-11 items-center justify-center gap-2 rounded-[12px] bg-ink text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
+        type="submit"
+        disabled={isSubmitting}
+        className="mt-5 flex h-11 items-center justify-center gap-2 rounded-[12px] bg-ink text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Plus className="size-4" />
-        Registrar Horas Manualmente
+        {isSubmitting ? "Guardando..." : "Registrar Horas Manualmente"}
       </button>
-    </div>
+    </form>
   );
 }

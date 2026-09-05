@@ -1,4 +1,110 @@
+import { apiRequest } from "./auth";
+
 export type TimerStatus = "IDLE" | "WORKING" | "PAUSED";
+
+export type ApiProject = {
+  id: string;
+  name: string;
+  timeZone: string;
+  dailyGoalMinutes: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ApiSegment = {
+  id: string;
+  kind: "work" | "break";
+  label: string;
+  start: string;
+  end: string | null;
+};
+
+export type TrackerMetrics = {
+  activeSeconds: number;
+  workSeconds: number;
+  breakSeconds: number;
+  dailyGoalMinutes: number;
+  goalMet: boolean;
+};
+
+export type TrackerDaySummary = TrackerMetrics & { date: string };
+
+export type TrackerSnapshot = {
+  project: Pick<ApiProject, "id" | "name" | "timeZone" | "dailyGoalMinutes">;
+  status: TimerStatus;
+  openSessionId: string | null;
+  segments: ApiSegment[];
+  metrics: TrackerMetrics;
+  previousDay: TrackerDaySummary;
+};
+
+export type PreviousDayScope = "all" | "business";
+
+export type CreateProjectInput = {
+  name: string;
+  timeZone: string;
+};
+
+export type ManualEntryInput = {
+  date: string;
+  startTime: string;
+  endTime: string;
+};
+
+export function getProjects(accessToken: string) {
+  return apiRequest<ApiProject[]>("/projects", { accessToken });
+}
+
+export function createProject(accessToken: string, input: CreateProjectInput) {
+  return apiRequest<ApiProject>("/projects", {
+    accessToken,
+    method: "POST",
+    body: input,
+  });
+}
+
+export function getTracker(
+  accessToken: string,
+  projectId: string,
+  previousDayScope: PreviousDayScope = "all",
+) {
+  const query = new URLSearchParams({ previousDayScope }).toString();
+  return apiRequest<TrackerSnapshot>(
+    `/projects/${encodeURIComponent(projectId)}/tracker?${query}`,
+    { accessToken },
+  );
+}
+
+function trackerMutation(accessToken: string, projectId: string, action: string) {
+  return apiRequest<TrackerSnapshot>(
+    `/projects/${encodeURIComponent(projectId)}/tracker/${action}`,
+    { accessToken, method: "POST" },
+  );
+}
+
+export function startTracker(accessToken: string, projectId: string) {
+  return trackerMutation(accessToken, projectId, "start");
+}
+
+export function pauseTracker(accessToken: string, projectId: string) {
+  return trackerMutation(accessToken, projectId, "break");
+}
+
+export function resumeTracker(accessToken: string, projectId: string) {
+  return trackerMutation(accessToken, projectId, "resume");
+}
+
+export function finishTracker(accessToken: string, projectId: string) {
+  return trackerMutation(accessToken, projectId, "finish");
+}
+
+export function addManualEntry(accessToken: string, projectId: string, input: ManualEntryInput) {
+  return apiRequest<TrackerSnapshot>(`/projects/${encodeURIComponent(projectId)}/manual-entries`, {
+    accessToken,
+    method: "POST",
+    body: input,
+  });
+}
 
 export type Project = {
   id: string;

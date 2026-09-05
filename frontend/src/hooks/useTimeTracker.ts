@@ -1,7 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Segment, TimerStatus } from "@/lib/tracker";
-
-const STORAGE_KEY = "TimeFlow.session.v1";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  addManualEntry,
+  finishTracker,
+  getTracker,
+  pauseTracker,
+  resumeTracker,
+  startTracker,
+  type TrackerSnapshot,
+  type TimerStatus,
+  type PreviousDayScope,
+  type ManualEntryInput,
+} from "@/lib/tracker";
+import type { Segment } from "@/lib/tracker";
 
 export type TrackerState = {
   status: TimerStatus;
@@ -10,159 +22,148 @@ export type TrackerState = {
   segments: Segment[];
 };
 
+type Transition = (accessToken: string, projectId: string) => Promise<TrackerSnapshot>;
+
 const initialState = (projectId: string): TrackerState => ({
   status: "IDLE",
   projectId,
   segments: [],
 });
 
-function load(projectId: string): TrackerState | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as TrackerState;
-    if (!parsed || typeof parsed.status !== "string") return null;
-    if (parsed.projectId !== projectId) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
+/**
+ * Projects the persisted snapshot into the timer shape used by the UI.
+ * Epoch timestamps keep the clock independent from render frequency.
+ */
+function toTrackerState(projectId: string, snapshot: TrackerSnapshot): TrackerState {
+  return {
+    projectId,
+    status: snapshot.status,
+    segments: snapshot.segments.map((segment) => ({
+      id: segment.id,
+      kind: segment.kind,
+      label: segment.label,
+      start: new Date(segment.start).getTime(),
+      end: segment.end ? new Date(segment.end).getTime() : null,
+    })),
+  };
 }
-
-const uid = () => Math.random().toString(36).slice(2, 10);
 
 /**
  * Timer state machine: IDLE -> WORKING <-> PAUSED -> IDLE.
- * Elapsed time is always derived from absolute timestamps, so the counter stays
- * accurate across reloads, tab sleep and background time.
+ * The backend is authoritative; the local clock only projects open timestamps.
  */
-export function useTimeTracker(projectId: string) {
+export function useTimeTracker(projectId: string, previousDayScope: PreviousDayScope = "all") {
+  const { session } = useAuth();
+  const accessToken = session?.accessToken ?? null;
   const [state, setState] = useState<TrackerState>(() => initialState(projectId));
   const [now, setNow] = useState(() => Date.now());
-  const hydrated = useRef(false);
+  const [isPending, setIsPending] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const {
+    data: trackerSnapshot,
+    error: trackerError,
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ["tracker", accessToken, projectId, previousDayScope],
+    queryFn: () => getTracker(accessToken!, projectId, previousDayScope),
+    enabled: accessToken !== null,
+  });
 
-  // Rehydrate after mount (SSR-safe).
   useEffect(() => {
-    const persisted = load(projectId);
-    setState(persisted ?? initialState(projectId));
-    hydrated.current = true;
-  }, [projectId]);
-
-  // Persist every transition.
-  useEffect(() => {
-    if (!hydrated.current) return;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch {
-      /* storage unavailable */
+    setActionError(null);
+    setState(initialState(projectId));
+    if (trackerSnapshot) {
+      setState(toTrackerState(projectId, trackerSnapshot));
+      setNow(Date.now());
     }
-  }, [state]);
+  }, [projectId, trackerSnapshot]);
 
-  // 1s tick only while a segment is open.
   useEffect(() => {
     if (state.status === "IDLE") return;
     const id = window.setInterval(() => setNow(Date.now()), 1000);
-    const onVisible = () => setNow(Date.now());
+    const onVisible = () => {
+      setNow(Date.now());
+      void refetch();
+    };
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [state.status]);
+  }, [refetch, state.status]);
 
-  const closeOpen = (segments: Segment[], at: number) =>
-    segments.map((s) => (s.end === null ? { ...s, end: at } : s));
+  const transition = useCallback(
+    async (operation: Transition) => {
+      if (!accessToken || isPending) return;
+      setIsPending(true);
+      setActionError(null);
+      try {
+        const snapshot = await operation(accessToken, projectId);
+        setState(toTrackerState(projectId, snapshot));
+        setNow(Date.now());
+        await refetch();
+      } catch (error) {
+        setActionError(error instanceof Error ? error.message : "No se pudo guardar el cambio");
+      } finally {
+        setIsPending(false);
+      }
+    },
+    [accessToken, isPending, projectId, refetch],
+  );
 
-  const startWork = useCallback(() => {
-    const at = Date.now();
-    setNow(at);
-    setState((prev) => {
-      const workCount = prev.segments.filter((s) => s.kind === "work").length;
-      return {
-        ...prev,
-        status: "WORKING",
-        segments: [
-          ...closeOpen(prev.segments, at),
-          {
-            id: uid(),
-            kind: "work",
-            label: `Bloque ${workCount + 1}`,
-            start: at,
-            end: null,
-          },
-        ],
-      };
-    });
-  }, []);
+  const startWork = useCallback(
+    () => transition(state.status === "PAUSED" ? resumeTracker : startTracker),
+    [state.status, transition],
+  );
+  const startBreak = useCallback(() => transition(pauseTracker), [transition]);
+  const resumeWork = useCallback(() => transition(resumeTracker), [transition]);
+  const finishDay = useCallback(() => transition(finishTracker), [transition]);
+  const reset = useCallback(() => {
+    setState(initialState(projectId));
+    void refetch();
+  }, [projectId, refetch]);
 
-  const startBreak = useCallback(() => {
-    const at = Date.now();
-    setNow(at);
-    setState((prev) => {
-      const breakCount = prev.segments.filter((s) => s.kind === "break").length;
-      return {
-        ...prev,
-        status: "PAUSED",
-        segments: [
-          ...closeOpen(prev.segments, at),
-          {
-            id: uid(),
-            kind: "break",
-            label: `Descanso ${breakCount + 1}`,
-            start: at,
-            end: null,
-          },
-        ],
-      };
-    });
-  }, []);
-
-  const finishDay = useCallback(() => {
-    const at = Date.now();
-    setState((prev) => ({
-      ...prev,
-      status: "IDLE",
-      segments: closeOpen(prev.segments, at),
-    }));
-  }, []);
-
-  const reset = useCallback(() => setState(initialState(projectId)), [projectId]);
-
-  const addManual = useCallback((start: number, end: number) => {
-    setState((prev) => {
-      const workCount = prev.segments.filter((s) => s.kind === "work").length;
-      return {
-        ...prev,
-        segments: [
-          ...prev.segments,
-          {
-            id: uid(),
-            kind: "work" as const,
-            label: `Bloque ${workCount + 1} · Manual`,
-            start,
-            end,
-          },
-        ].sort((a, b) => a.start - b.start),
-      };
-    });
-  }, []);
+  const addManual = useCallback(
+    (input: ManualEntryInput) =>
+      transition((token, selectedProjectId) => addManualEntry(token, selectedProjectId, input)),
+    [transition],
+  );
 
   const totals = useMemo(() => {
     let work = 0;
     let brk = 0;
-    for (const s of state.segments) {
-      const span = ((s.end ?? now) - s.start) / 1000;
-      if (s.kind === "work") work += span;
+    for (const segment of state.segments) {
+      const span = ((segment.end ?? now) - segment.start) / 1000;
+      if (segment.kind === "work") work += span;
       else brk += span;
     }
-    const open = state.segments.find((s) => s.end === null);
+    const open = state.segments.find((segment) => segment.end === null);
     return {
       workSeconds: work,
       breakSeconds: brk,
       currentSeconds: open ? (now - open.start) / 1000 : 0,
     };
-  }, [state.segments, now]);
+  }, [now, state.segments]);
 
-  return { ...state, now, totals, startWork, startBreak, finishDay, addManual, reset };
+  return {
+    ...state,
+    now,
+    totals,
+    isLoading,
+    isPending,
+    error: actionError ?? errorMessage(trackerError),
+    metrics: trackerSnapshot?.metrics ?? null,
+    previousDay: trackerSnapshot?.previousDay ?? null,
+    startWork,
+    startBreak,
+    resumeWork,
+    finishDay,
+    addManual,
+    reset,
+  };
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : null;
 }

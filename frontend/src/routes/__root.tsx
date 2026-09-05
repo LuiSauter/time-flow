@@ -14,6 +14,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { useAuth } from "../hooks/useAuth";
+import { ProjectsProvider } from "../hooks/ProjectsProvider";
 
 function NotFoundComponent() {
   return (
@@ -119,7 +120,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const { status } = useAuth();
+  const { session, status } = useAuth();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const navigate = useNavigate();
 
@@ -142,8 +143,10 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <ProjectsProvider accessToken={session?.accessToken ?? null}>
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+      </ProjectsProvider>
     </QueryClientProvider>
   );
 }
