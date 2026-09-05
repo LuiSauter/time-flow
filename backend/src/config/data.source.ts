@@ -4,11 +4,14 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import 'dotenv/config';
 import { User } from '../users/user.entity.js';
 import { Project } from '../projects/project.entity.js';
+import { ProjectRate } from '../projects/project-rate.entity.js';
+import { ProjectDailyRateOverride } from '../projects/project-daily-rate-override.entity.js';
 import { WorkSession } from '../tracker/work-session.entity.js';
 import { TrackerSegment } from '../tracker/tracker-segment.entity.js';
 import { CreateUsers1760000000000 } from '../migrations/1760000000000-create-users.js';
 import { CreateProjects1760000001000 } from '../migrations/1760000001000-create-projects.js';
 import { CreateTracker1760000002000 } from '../migrations/1760000002000-create-tracker.js';
+import { CreateProjectRates1760000003000 } from '../migrations/1760000003000-create-project-rates.js';
 
 const isProd = process.env.APP_PROD === 'true';
 
@@ -19,11 +22,19 @@ export const DataSourceConfig: DataSourceOptions = {
   username: process.env.DB_USERNAME ?? 'postgres',
   password: process.env.DB_PASSWORD ?? 'postgres',
   database: process.env.DB_DATABASE ?? 'postgres',
-  entities: [User, Project, WorkSession, TrackerSegment],
+  entities: [
+    User,
+    Project,
+    ProjectRate,
+    ProjectDailyRateOverride,
+    WorkSession,
+    TrackerSegment,
+  ],
   migrations: [
     CreateUsers1760000000000,
     CreateProjects1760000001000,
     CreateTracker1760000002000,
+    CreateProjectRates1760000003000,
   ],
   migrationsRun: false,
   synchronize: false,
