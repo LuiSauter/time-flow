@@ -10,6 +10,7 @@ describe('Projects and tracker (e2e)', () => {
   let userAToken: string;
   let userBToken: string;
   let projectId: string;
+  let secondProjectId: string;
 
   beforeAll(async () => {
     const moduleFixture = await Test.createTestingModule({
@@ -31,6 +32,13 @@ describe('Projects and tracker (e2e)', () => {
       .send({ name: `E2E ${Date.now()}`, timeZone: 'America/La_Paz' })
       .expect(201);
     projectId = projectResponse.body.id as string;
+
+    const secondProjectResponse = await request(app.getHttpServer())
+      .post('/api/projects')
+      .set('Authorization', `Bearer ${userAToken}`)
+      .send({ name: `E2E second ${Date.now()}`, timeZone: 'America/La_Paz' })
+      .expect(201);
+    secondProjectId = secondProjectResponse.body.id as string;
   });
 
   afterAll(async () => {
@@ -71,7 +79,9 @@ describe('Projects and tracker (e2e)', () => {
     ]);
 
     expect(responses.every((response) => response.status === 201)).toBe(true);
-    expect(responses[0]?.body.openSessionId).toBe(responses[1]?.body.openSessionId);
+    expect(responses[0]?.body.openSessionId).toBe(
+      responses[1]?.body.openSessionId,
+    );
   });
 
   it('rejects overlapping and future manual ranges', async () => {
@@ -97,7 +107,90 @@ describe('Projects and tracker (e2e)', () => {
       .send({ ...entry, date: dateOffset(2) })
       .expect(400);
 
-    expect(futureResponse.body.message).toContain('No se permiten registros futuros');
+    expect(futureResponse.body.message).toContain(
+      'No se permiten registros futuros',
+    );
+  });
+
+  it('persists rates and returns scoped monetary history for multiple projects', async () => {
+    await request(app.getHttpServer())
+      .post(`/api/projects/${projectId}/tracker/finish`)
+      .set('Authorization', `Bearer ${userAToken}`)
+      .expect(201);
+
+    const date = dateOffset(0);
+    await request(app.getHttpServer())
+      .post(`/api/projects/${projectId}/manual-entries`)
+      .set('Authorization', `Bearer ${userAToken}`)
+      .send({ date, startTime: '10:00', endTime: '11:00' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/api/projects/${secondProjectId}/manual-entries`)
+      .set('Authorization', `Bearer ${userAToken}`)
+      .send({ date, startTime: '11:00', endTime: '13:00' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .patch(`/api/projects/${projectId}/rate`)
+      .set('Authorization', `Bearer ${userAToken}`)
+      .send({ hourlyRate: 10 })
+      .expect(200);
+    await request(app.getHttpServer())
+      .patch(`/api/projects/${secondProjectId}/rate`)
+      .set('Authorization', `Bearer ${userAToken}`)
+      .send({ hourlyRate: 20 })
+      .expect(200);
+    await request(app.getHttpServer())
+      .put(`/api/projects/${secondProjectId}/rate-overrides/${date}`)
+      .set('Authorization', `Bearer ${userAToken}`)
+      .send({ hourlyRate: 25 })
+      .expect(200);
+
+    const history = await request(app.getHttpServer())
+      .get('/api/history')
+      .query({
+        period: 'custom',
+        startDate: date,
+        endDate: date,
+        onlyWeekdays: false,
+      })
+      .set('Authorization', `Bearer ${userAToken}`)
+      .expect(200);
+
+    expect(history.body.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ projectId, hourlyRate: 10, amountUsd: 10 }),
+        expect.objectContaining({
+          projectId: secondProjectId,
+          hourlyRate: 25,
+          amountUsd: 50,
+        }),
+      ]),
+    );
+    expect(history.body.totals.amountUsd).toBe(60);
+
+    const projects = await request(app.getHttpServer())
+      .get('/api/projects')
+      .set('Authorization', `Bearer ${userAToken}`)
+      .expect(200);
+    expect(projects.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: projectId, hourlyRate: 10 }),
+        expect.objectContaining({ id: secondProjectId, hourlyRate: 20 }),
+      ]),
+    );
+
+    await request(app.getHttpServer())
+      .get('/api/history')
+      .query({
+        period: 'custom',
+        startDate: date,
+        endDate: date,
+        onlyWeekdays: false,
+        projectId,
+      })
+      .set('Authorization', `Bearer ${userBToken}`)
+      .expect(404);
   });
 });
 
@@ -122,6 +215,8 @@ function dateOffset(offset: number) {
     month: '2-digit',
     day: '2-digit',
   }).formatToParts(date);
-  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  const values = Object.fromEntries(
+    parts.map(({ type, value }) => [type, value]),
+  );
   return `${values.year}-${values.month}-${values.day}`;
 }
