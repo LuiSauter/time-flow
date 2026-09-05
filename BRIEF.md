@@ -1,6 +1,6 @@
 # TimeFlow — Brief completo del prototipo
 
-Aplicación web privada (multiempresa) para el **seguimiento de horas de trabajo en tiempo real**, orientada a eliminar "horas muertas" y a dar visibilidad de la productividad real por empresa, día y persona.
+Aplicación web privada (multiproyecto) para el **seguimiento de horas de trabajo en tiempo real**, orientada a eliminar "horas muertas" y a dar visibilidad de la productividad real por proyecto, día y persona.
 
 Estado actual: **prototipo funcional de front-end** (alta fidelidad) con datos de demostración y cronómetro real persistente. Sin backend conectado todavía.
 
@@ -11,10 +11,10 @@ Estado actual: **prototipo funcional de front-end** (alta fidelidad) con datos d
 | Elemento | Definición |
 |---|---|
 | Nombre | TimeFlow |
-| Tipo | Aplicación web privada, acceso solo por invitación / cuenta corporativa |
+| Tipo | Aplicación web privada, acceso mediante cuenta propia |
 | Usuario objetivo | Colaboradores que registran su jornada y responsables que supervisan cumplimiento |
 | Propuesta de valor | Cronómetro de jornada con descansos explícitos, historial auditable y analítica con insights de IA |
-| Modelo | Multiempresa: una misma persona puede pertenecer a varias empresas y alternar entre ellas |
+| Modelo | Multiproyecto: una misma persona puede crear varios proyectos y alternar entre ellos |
 | Idioma | Español |
 
 ---
@@ -37,9 +37,9 @@ Estado actual: **prototipo funcional de front-end** (alta fidelidad) con datos d
 Shell compartido (`AppShell`) presente en todas las pantallas autenticadas:
 
 - **Marca** TimeFlow.
-- **Selector de empresa activa:** Nuxio, Empresa.com, y acción "Agregar".
+- **Selector de proyecto activo:** Nuxio, Focus, y acción "Agregar".
 - **Navegación principal:** Home (Tracker) · Historial · Detalle Diario · Dashboard & IA.
-- **Perfil:** avatar y datos de la cuenta Google (demo) + cerrar sesión.
+- **Perfil:** nombre, email y cerrar sesión.
 
 Rutas:
 
@@ -56,7 +56,8 @@ Rutas:
 ## 4. Pantallas y funcionalidades
 
 ### 4.1 Acceso (`/auth`)
-- Ingreso con Google (botón único, sin formularios).
+- Registro e inicio de sesión con nombre completo, email y contraseña.
+- Recuperación de contraseña mediante enlace de 20 minutos.
 - Mensaje de aplicación privada y nota de privacidad de datos.
 - Redirección al Tracker tras autenticar.
 
@@ -71,7 +72,7 @@ Rutas:
 - **Registro manual** de un bloque de trabajo (inicio y fin) para corregir olvidos.
 
 ### 4.3 Historial (`/historial`)
-- Filtros: período (semana / mes / trimestre), solo días hábiles, y empresa (todas o una).
+- Filtros: período (semana / mes / trimestre), solo días hábiles, y proyecto (todos o uno).
 - Tabla por día: fecha, día de la semana, horas activas, tiempo de descanso, cumplimiento y acciones.
 - Fila de totales del período.
 - Acceso directo al detalle de cada día.
@@ -85,7 +86,7 @@ Rutas:
 ### 4.5 Dashboard de Productividad & IA (`/dashboard`)
 - KPIs del período: eficiencia, horas acumuladas, promedio diario y descansos.
 - **Gráfico de barras** de horas por día.
-- **Gráfico de torta** con la distribución de horas por empresa.
+- **Gráfico de torta** con la distribución de horas por proyecto.
 - **Insights de IA:** observaciones en lenguaje natural sobre ritmo, constancia y horas muertas detectadas.
 
 ---
@@ -109,7 +110,7 @@ Características:
 - Recalculo al volver a hacer visible la pestaña.
 - Acciones expuestas: `startWork`, `startBreak`, `finishDay`, `addManual`, `reset`.
 - Totales derivados: trabajo, descanso y segmento actual.
-- La sesión guardada está ligada a la empresa activa; al cambiar de empresa se carga su propio estado.
+- La sesión guardada está ligada al proyecto activo; al cambiar de proyecto se carga su propio estado.
 
 Tipo de segmento:
 
@@ -128,24 +129,23 @@ type Segment = {
 ## 6. Modelo de datos propuesto (PostgreSQL)
 
 ```text
-User ──< Membership >── Company
+User ──< Project
              │
              └──< WorkSession ──< BreakSession
 ```
 
 | Tabla | Campos clave |
 |---|---|
-| `user` | id, google_id, email, nombre, avatar_url, creado_en |
-| `company` | id, nombre, slug, zona_horaria, meta_horas_diarias, creado_en |
-| `membership` | id, user_id, company_id, rol (miembro / responsable / admin) |
-| `work_session` | id, user_id, company_id, inicio, fin, origen (automático / manual), nota |
+| `user` | id, email, nombre, creado_en |
+| `project` | id, user_id, nombre, slug, zona_horaria, meta_horas_diarias, creado_en |
+| `work_session` | id, user_id, project_id, inicio, fin, origen (automático / manual), nota |
 | `break_session` | id, work_session_id, inicio, fin, motivo |
 
 Reglas:
-- Una jornada activa por usuario y empresa (`fin IS NULL` único).
+- Una jornada activa por usuario y proyecto (`fin IS NULL` único).
 - Los descansos siempre cuelgan de una jornada y quedan dentro de su rango.
 - Horas activas del día = suma de jornadas − suma de descansos.
-- Aislamiento por empresa en toda consulta (multitenant).
+- Aislamiento por proyecto en toda consulta.
 
 ---
 
@@ -167,15 +167,15 @@ Reglas:
 - API: NestJS
 - Base de datos: PostgreSQL
 - Front: React + Tailwind
-- Autenticación: Google OAuth
+- Autenticación: email y contraseña
 
 ### Archivos principales
 
 ```text
 src/
-  components/AppShell.tsx     Shell, selector de empresa, navegación, perfil
+  components/AppShell.tsx     Shell, selector de proyecto, navegación, perfil
   hooks/useTimeTracker.ts     Máquina de estados y persistencia del cronómetro
-  lib/tracker.ts              Tipos, empresas demo, formato en español, historial mock
+  lib/tracker.ts              Tipos, proyectos demo, formato en español, historial mock
   routes/auth.tsx             Acceso
   routes/index.tsx            Tracker
   routes/historial.tsx        Historial
@@ -196,8 +196,8 @@ src/
 
 ## 9. Fuera de alcance del prototipo
 
-- Backend real, base de datos y sesiones de Google reales (hoy es una cuenta de demostración).
-- Alta y administración real de empresas e invitaciones.
+- Backend real, base de datos y autenticación persistente real (hoy es una cuenta de demostración).
+- Alta y administración real de proyectos.
 - Insights de IA generados en vivo (hoy son textos de ejemplo).
 - Exportaciones, notificaciones y aprobación de ajustes por un responsable.
 
@@ -205,8 +205,8 @@ src/
 
 ## 10. Siguientes pasos sugeridos
 
-1. Conectar el backend y el acceso real con Google.
-2. Persistir jornadas y descansos en base de datos con aislamiento por empresa.
+1. Conectar el backend y el acceso real con email y contraseña.
+2. Persistir jornadas y descansos en base de datos con aislamiento por proyecto.
 3. Panel de responsable: equipo, cumplimiento y aprobación de ajustes manuales.
 4. Insights de IA reales sobre los datos históricos.
 5. Exportación a CSV/PDF y reportes por período.

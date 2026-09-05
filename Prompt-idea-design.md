@@ -2,17 +2,17 @@
 
 # PROMPT PARA AGENTE DE IA: DISEÑO PROTOTIPO / WIREFRAME WEB
 
-Actúa como Diseñador de UX/UI Senior y Arquitecto Frontend. Tu objetivo es generar la propuesta completa de diseño prototipo y wireframes detallados en formato web (desktop y responsive) para una aplicación web de seguimiento de horas de trabajo en tiempo real, enfocada en la eliminación de horas muertas y gestión por empresas.
+Actúa como Diseñador de UX/UI Senior y Arquitecto Frontend. Tu objetivo es generar la propuesta completa de diseño prototipo y wireframes detallados en formato web (desktop y responsive) para una aplicación web de seguimiento de horas de trabajo en tiempo real, enfocada en la eliminación de horas muertas y gestión por proyectos personales.
 
 ---
 
 ## 1. CONTEXTO Y TECNOLOGÍAS DEL PROYECTO
 
-- **Propósito:** Registro preciso de tiempo de trabajo activo vs. descansos por empresa, previniendo horas muertas.
+- **Propósito:** Registro preciso de tiempo de trabajo activo vs. descansos por proyecto, previniendo horas muertas.
 
-- **Stack Tecnológico:** NestJS (Backend), PostgreSQL + TypeORM/Prisma (DB), React + Tailwind CSS (Frontend), Google OAuth 2.0.
+- **Stack Tecnológico:** NestJS (Backend), PostgreSQL + TypeORM/Prisma (DB), React + Tailwind CSS (Frontend), autenticación con email y contraseña.
 
-- **Enfoque de Usuarios:** Multitenant a nivel de usuario/cuenta. Cada usuario maneja sus propias empresas, registros y métricas de forma 100% aislada y privada.
+- **Enfoque de Usuarios:** Cada usuario maneja sus propios proyectos, registros y métricas de forma 100% aislada y privada.
 
 ---
 
@@ -20,11 +20,11 @@ Actúa como Diseñador de UX/UI Senior y Arquitecto Frontend. Tu objetivo es gen
 
 El diseño debe incluir una barra de navegación superior/lateral consistente con:
 
-- Logotipo y selector activo de **Empresa Actual** (Dropdown: ej. "Nuxio", "Empresa.com", "+ Agregar Empresa").
+- Logotipo y selector activo de **Proyecto Actual** (Dropdown: ej. "Nuxio", "Focus", "+ Agregar Proyecto").
 
 - Menú de navegación principal: **Home (Tracker)** | **Historial** | **Detalle Diario** | **Dashboard & IA**
 
-- Perfil del usuario (Avatar Google, Nombre, Correo y Botón de Cerrar Sesión).
+- Perfil del usuario (Nombre, Correo y Botón de Cerrar Sesión).
 
 ---
 
@@ -38,7 +38,8 @@ El diseño debe incluir una barra de navegación superior/lateral consistente co
 
   - Título: "Bienvenido a tu Time Tracker".
 
-  - Botón principal de "Iniciar sesión con Google" (OAuth 2.0).
+  - Registro e inicio de sesión con nombre completo, email y contraseña.
+  - Recuperación de contraseña mediante enlace válido durante 20 minutos.
 
   - Leyenda de privacidad: "Tus registros de tiempo son totalmente privados y únicos para tu cuenta".
 
@@ -52,7 +53,7 @@ El diseño debe incluir una barra de navegación superior/lateral consistente co
 
   - **Switch Toggle de Filtro de Días:** `[ Días Hábiles (L-V) ]` vs `[ Todos los días (L-D) ]`.
 
-  - Selector de Empresa Activa (dropdown o pills horizontales para cambiar entre *Nuxio*, *Empresa.com*, etc.).
+  - Selector de Proyecto Activo (dropdown o pills horizontales para cambiar entre *Nuxio*, *Focus*, etc.).
 
 - **Sección Central (Resumen de Métricas - Grid de Cards):**
 
@@ -80,7 +81,7 @@ El diseño debe incluir una barra de navegación superior/lateral consistente co
 
   - **Tabla / Lista de Sesiones del Día:** Registro en tiempo real de los bloques creados en la sesión activa (Ej: Bloque 1: 09:00 - 11:30 | Descanso: 11:30 - 11:45 | Bloque 2: 11:45 - En curso).
 
-  - **Acción Manual:** Botón de `[ + Registrar Horas Manualmente ]` (abre modal para ingresar fecha, hora inicio, hora fin y empresa sin límite de registros).
+  - **Acción Manual:** Botón de `[ + Registrar Horas Manualmente ]` (abre modal para ingresar fecha, hora inicio, hora fin y proyecto sin límite de registros).
 
 ---
 
@@ -92,11 +93,11 @@ El diseño debe incluir una barra de navegación superior/lateral consistente co
 
   - Checkbox / Toggle: `Filtrar solo Días Hábiles (L-V)`.
 
-  - Filtro por Empresa (Todas, Nuxio, Empresa.com).
+  - Filtro por Proyecto (Todos, Nuxio, Focus).
 
 - **Vistas del Historial:**
 
-  - **Vista Lista / Tabla:** Columna Fecha, Día de la semana, Empresa, Total Horas Activas, Total Descansos, Cumplimiento de Meta y Acciones (Ver detalle, Editar, Eliminar).
+   - **Vista Lista / Tabla:** Columna Fecha, Día de la semana, Proyecto, Total Horas Activas, Total Descansos, Cumplimiento de Meta y Acciones (Ver detalle, Editar, Eliminar).
 
   - **Resumen al pie de tabla:** Total de horas acumuladas en el período filtrado.
 
@@ -104,7 +105,7 @@ El diseño debe incluir una barra de navegación superior/lateral consistente co
 
 ### PANTALLA 4: Detalles de Horas y Descansos por Día (Vista Detallada)
 
-- **Header:** Resumen del día seleccionado (Ej: *Detalle del Lunes 31 de Agosto - Empresa: Nuxio*).
+- **Header:** Resumen del día seleccionado (Ej: *Detalle del Lunes 31 de Agosto - Proyecto: Nuxio*).
 
 - **Línea de Tiempo (Timeline Visual):**
 
@@ -132,7 +133,7 @@ El diseño debe incluir una barra de navegación superior/lateral consistente co
 
   - Ratio de trabajo vs. descanso (% de eficiencia).
 
-  - Distribución de horas por Empresa (Gráfico de Torta / Pie Chart).
+   - Distribución de horas por Proyecto (Gráfico de Torta / Pie Chart).
 
 - **Gráficos Estadísticos:**
 
@@ -158,7 +159,7 @@ Por favor, genera:
 
 2. El **Modelo del Estado Frontend (React)** para controlar los estados del cronómetro (`IDLE`, `WORKING`, `PAUSED`) y la persistencia del tiempo en segundo plano.
 
-3. El **Diagrama de Entidades Base de Datos (PostgreSQL)** para soportar la relación `User -> Company -> WorkSession -> BreakSession`.
+3. El **Diagrama de Entidades Base de Datos (PostgreSQL)** para soportar la relación `User -> Project -> WorkSession -> BreakSession`.
 
 ## Development
 

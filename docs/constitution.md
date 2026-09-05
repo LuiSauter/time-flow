@@ -12,7 +12,7 @@ This document defines the principles that govern product, design and engineering
 
 ### 1. Privacy and Tenant Isolation
 
-Time records are private to the authenticated user and the selected company. Every persisted record, query, mutation and derived metric must be scoped by the authorized user and company membership. A company switch must never expose or combine another company's sessions, breaks or metrics.
+Time records are private to the authenticated user and the selected project. Every persisted record, query, mutation and derived metric must be scoped by the authorized user and project ownership. A project switch must never expose or combine another project's sessions, breaks or metrics.
 
 ### 2. Temporal Accuracy Is the Source of Truth
 
@@ -40,11 +40,11 @@ Every work or break segment has an identity, kind, label and absolute start time
 
 In the persistent model:
 
-- A user may have multiple company memberships.
-- A user may have at most one active work session per company.
+- A user may own multiple projects.
+- A user may have at most one active work session per project.
 - A break belongs to a work session and stays within its time range.
 - Active time equals work time minus break time.
-- Daily goals and company time zones are company-level configuration.
+- Daily goals and project time zones are project-level configuration.
 
 Database constraints and service validation should enforce these rules; frontend validation alone is insufficient.
 
@@ -73,7 +73,7 @@ Interactive controls must be keyboard accessible, have an identifiable focus sta
 
 ### 9. Typed Boundaries and Validated Inputs
 
-TypeScript domain types describe timer, company and record shapes. API DTOs validate external input. Date/time ranges, company identifiers, membership permissions and manual entries must be validated at boundaries before business logic runs.
+TypeScript domain types describe timer, project and record shapes. API DTOs validate external input. Date/time ranges, project identifiers, ownership access and manual entries must be validated at boundaries before business logic runs.
 
 ### 10. Safe Persistence and SSR Compatibility
 
@@ -81,11 +81,11 @@ Browser-only storage is accessed only after the client is available. Rehydration
 
 ### 11. Testable Behavior
 
-Tests should target business behavior rather than implementation details. Minimum coverage for the tracker includes transitions, open-segment totals, reload/rehydration, visibility recovery, manual blocks, company switching and reset. Backend tests must cover authorization, tenant isolation, constraints, validation and error responses.
+Tests should target business behavior rather than implementation details. Minimum coverage for the tracker includes transitions, open-segment totals, reload/rehydration, visibility recovery, manual blocks, project switching and reset. Backend tests must cover authorization, project isolation, constraints, validation and error responses.
 
 ### 12. Explicit Scope and Evolution
 
-The prototype currently uses deterministic demo data, browser persistence, demo authentication and example AI insights. Real OAuth, production database persistence, invitations, live AI, exports, notifications and approval workflows require explicit design and security review before implementation.
+The prototype currently uses deterministic demo data, browser persistence, demo authentication and example AI insights. Production database persistence, project collaboration, live AI, exports, notifications and approval workflows require explicit design and security review before implementation.
 
 Changes that affect these principles must update this constitution and include the reason, migration impact and verification strategy.
 

@@ -2,7 +2,7 @@
 
 ## Project Context
 
-TimeFlow is a private, Spanish-language, multi-company time-tracking application. Users record active work and explicit breaks, review an auditable daily history, and inspect productivity metrics and example AI insights.
+TimeFlow is a private, Spanish-language, multi-project time-tracking application. Users record active work and explicit breaks, review an auditable daily history, and inspect productivity metrics and example AI insights.
 
 The repository contains two applications:
 
@@ -70,14 +70,14 @@ Do not assume a root-level `package.json` exists. Avoid committing generated out
 - Keep open segments representable and close them with a timestamp when a transition finishes the active period.
 - Keep persistence SSR-safe and rehydrate browser state after mounting.
 - Recalculate displayed time after `visibilitychange` so background tabs and suspended devices remain accurate.
-- Keep timer state scoped to the active company. Never mix segments between companies.
+- Keep timer state scoped to the active project. Never mix segments between projects.
 - Validate manual ranges and preserve chronological ordering when adding manual work blocks.
 
 ### Backend and data
 
-- Enforce company isolation in every authenticated query and mutation.
-- Model memberships explicitly; a user may belong to multiple companies.
-- Enforce one active work session per user and company.
+- Enforce project isolation in every authenticated query and mutation.
+- Model project ownership explicitly; a user may own multiple projects.
+- Enforce one active work session per user and project.
 - Keep breaks within their parent work session and calculate active time as work duration minus break duration.
 - Use migrations for schema changes and validate DTOs at API boundaries.
 - Return consistent errors through the existing backend error handling instead of leaking implementation details.
@@ -85,10 +85,10 @@ Do not assume a root-level `package.json` exists. Avoid committing generated out
 ## Testing Expectations
 
 - Run the narrowest relevant frontend lint/build or backend test first, then the broader check when practical.
-- Add or update tests for timer transitions, timestamp-derived totals, company isolation, validation and API behavior.
-- Test edge cases: reload during an open segment, background-tab recovery, finishing from work or break, invalid manual ranges and company switching.
+- Add or update tests for timer transitions, timestamp-derived totals, project isolation, validation and API behavior.
+- Test edge cases: reload during an open segment, background-tab recovery, finishing from work or break, invalid manual ranges and project switching.
 - Do not treat demo data or mock AI insights as production behavior.
 
 ## Scope Boundaries
 
-The current prototype does not include real Google OAuth, production persistence, company invitations, live AI insights, exports, notifications or approval workflows. Do not implement these implicitly while changing an unrelated feature; document and scope them explicitly.
+The current prototype does not include production persistence, live AI insights, project collaboration, exports, notifications or approval workflows. Do not implement these implicitly while changing an unrelated feature; document and scope them explicitly.
