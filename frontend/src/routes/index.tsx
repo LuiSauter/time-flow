@@ -3,22 +3,24 @@ import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { AppShell, PageHeading, Segmented } from "@/components/AppShell";
 import { useTimeTracker } from "@/hooks/useTimeTracker";
-import { COMPANIES, clockOf, hm, hms, longDate } from "@/lib/tracker";
+import { PROJECTS, clockOf, hm, hms, longDate } from "@/lib/tracker";
+import { requirePrivateSession } from "@/lib/route-guard";
 
 export const Route = createFileRoute("/")({
+  beforeLoad: requirePrivateSession,
   head: () => ({
     meta: [
       { title: "TimeFlow · Cronómetro de jornada en tiempo real" },
       {
         name: "description",
         content:
-          "Controla tu jornada activa, descansos y límite diario por empresa con un cronómetro en tiempo real.",
+          "Controla tu jornada activa, descansos y límite diario por proyecto con un cronómetro en tiempo real.",
       },
       { property: "og:title", content: "TimeFlow · Cronómetro de jornada en tiempo real" },
       {
         property: "og:description",
         content:
-          "Controla tu jornada activa, descansos y límite diario por empresa con un cronómetro en tiempo real.",
+          "Controla tu jornada activa, descansos y límite diario por proyecto con un cronómetro en tiempo real.",
       },
     ],
   }),
@@ -40,15 +42,18 @@ function MetricCard({
   right?: string;
   progress?: number;
 }) {
-  const toneClass =
-    tone === "work" ? "text-work" : tone === "rest" ? "text-rest" : "text-ink";
+  const toneClass = tone === "work" ? "text-work" : tone === "rest" ? "text-rest" : "text-ink";
   return (
     <div className="rim rounded-[14px] bg-panel/70 px-4 py-3.5 backdrop-blur-sm">
       <div className="flex items-baseline justify-between">
         <span className="text-[11px] font-medium text-mute">{label}</span>
-        {right ? <span className="font-clock text-[12px] tabular-nums text-faint">{right}</span> : null}
+        {right ? (
+          <span className="font-clock text-[12px] tabular-nums text-faint">{right}</span>
+        ) : null}
       </div>
-      <div className={`mt-1 font-clock text-[26px] font-medium tabular-nums tracking-tight ${toneClass}`}>
+      <div
+        className={`mt-1 font-clock text-[26px] font-medium tabular-nums tracking-tight ${toneClass}`}
+      >
         {value}
       </div>
       {hint ? <div className="mt-0.5 text-[11px] text-faint">{hint}</div> : null}
@@ -65,14 +70,14 @@ function MetricCard({
 }
 
 function TrackerPage() {
-  const [companyId, setCompanyId] = useState(COMPANIES[0]!.id);
+  const [projectId, setProjectId] = useState(PROJECTS[0]!.id);
   const [dayFilter, setDayFilter] = useState("habiles");
-  const tracker = useTimeTracker(companyId);
-  const company = COMPANIES.find((c) => c.id === companyId)!;
+  const tracker = useTimeTracker(projectId);
+  const project = PROJECTS.find((p) => p.id === projectId)!;
 
   const today = useMemo(() => new Date(), []);
   const workMinutes = tracker.totals.workSeconds / 60;
-  const goalRatio = workMinutes / company.dailyGoalMinutes;
+  const goalRatio = workMinutes / project.dailyGoalMinutes;
 
   const badge =
     tracker.status === "WORKING"
@@ -89,7 +94,7 @@ function TrackerPage() {
   const [hh, mm, ss] = mainClock.split(":");
 
   return (
-    <AppShell companyId={companyId} onCompanyChange={setCompanyId}>
+    <AppShell projectId={projectId} onProjectChange={setProjectId}>
       <PageHeading
         eyebrow="Hoy"
         title={longDate(today)}
@@ -124,7 +129,7 @@ function TrackerPage() {
         />
         <MetricCard
           label="Límite diario"
-          right={hm(company.dailyGoalMinutes)}
+          right={hm(project.dailyGoalMinutes)}
           value={hm(workMinutes)}
           progress={goalRatio}
         />
@@ -141,7 +146,7 @@ function TrackerPage() {
                 {badge.text}
               </span>
               <span className="text-[12px] text-faint">
-                {tracker.status === "IDLE" ? "Sin sesión activa" : "Sesión activa"} · {company.name}
+                {tracker.status === "IDLE" ? "Sin sesión activa" : "Sesión activa"} · {project.name}
               </span>
             </div>
 

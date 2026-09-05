@@ -2,16 +2,18 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import { AppShell, PageHeading, Segmented } from "@/components/AppShell";
-import { COMPANIES, HISTORY, companyName, hm, isWeekday, shortDate, weekdayOf } from "@/lib/tracker";
+import { PROJECTS, HISTORY, projectName, hm, isWeekday, shortDate, weekdayOf } from "@/lib/tracker";
+import { requirePrivateSession } from "@/lib/route-guard";
 
 export const Route = createFileRoute("/historial")({
+  beforeLoad: requirePrivateSession,
   head: () => ({
     meta: [
       { title: "Historial de horas por día · TimeFlow" },
       {
         name: "description",
         content:
-          "Filtra tu historial de jornadas por rango de fechas, empresa y días hábiles, con totales acumulados.",
+          "Filtra tu historial de jornadas por rango de fechas, proyecto y días hábiles, con totales acumulados.",
       },
       { property: "og:title", content: "Historial de horas por día · TimeFlow" },
       {
@@ -24,23 +26,23 @@ export const Route = createFileRoute("/historial")({
 });
 
 function HistorialPage() {
-  const [companyId, setCompanyId] = useState(COMPANIES[0]!.id);
+  const [projectId, setProjectId] = useState(PROJECTS[0]!.id);
   const [range, setRange] = useState("mes");
   const [onlyWeekdays, setOnlyWeekdays] = useState(true);
-  const [companyFilter, setCompanyFilter] = useState("todas");
+  const [projectFilter, setProjectFilter] = useState("todos");
 
   const rows = useMemo(() => {
     const limit = range === "semana" ? 7 : range === "mes" ? 30 : 14;
     return HISTORY.filter((r) => (onlyWeekdays ? isWeekday(r.date) : true))
-      .filter((r) => (companyFilter === "todas" ? true : r.companyId === companyFilter))
+      .filter((r) => (projectFilter === "todos" ? true : r.projectId === projectFilter))
       .slice(0, limit);
-  }, [range, onlyWeekdays, companyFilter]);
+  }, [range, onlyWeekdays, projectFilter]);
 
   const totalWork = rows.reduce((a, r) => a + r.workMinutes, 0);
   const totalBreak = rows.reduce((a, r) => a + r.breakMinutes, 0);
 
   return (
-    <AppShell companyId={companyId} onCompanyChange={setCompanyId}>
+    <AppShell projectId={projectId} onProjectChange={setProjectId}>
       <PageHeading
         eyebrow="Historial"
         title="Horas registradas por día"
@@ -68,13 +70,13 @@ function HistorialPage() {
           Filtrar solo Días Hábiles (L-V)
         </label>
         <span className="h-4 w-px bg-rim" />
-        <span className="text-[12px] font-medium text-mute">Empresa</span>
+        <span className="text-[12px] font-medium text-mute">Proyecto</span>
         <Segmented
-          value={companyFilter}
-          onChange={setCompanyFilter}
+          value={projectFilter}
+          onChange={setProjectFilter}
           options={[
             { value: "todas", label: "Todas" },
-            ...COMPANIES.map((c) => ({ value: c.id, label: c.name })),
+            ...PROJECTS.map((p) => ({ value: p.id, label: p.name })),
           ]}
         />
       </div>
@@ -83,7 +85,7 @@ function HistorialPage() {
         <div className="grid grid-cols-[110px_100px_1fr_90px_90px_120px_100px] gap-3 border-b border-rim px-5 py-3 text-[11px] font-medium uppercase tracking-[0.12em] text-faint">
           <span>Fecha</span>
           <span>Día</span>
-          <span>Empresa</span>
+          <span>Proyecto</span>
           <span className="text-right">Activas</span>
           <span className="text-right">Descansos</span>
           <span className="text-right">Cumplimiento</span>
@@ -99,7 +101,7 @@ function HistorialPage() {
               >
                 <span className="font-clock tabular-nums text-mute">{shortDate(r.date)}</span>
                 <span className="text-mute">{weekdayOf(r.date)}</span>
-                <span className="font-medium">{companyName(r.companyId)}</span>
+                <span className="font-medium">{projectName(r.projectId)}</span>
                 <span className="text-right font-clock tabular-nums">{hm(r.workMinutes)}</span>
                 <span className="text-right font-clock tabular-nums text-rest">
                   {hm(r.breakMinutes)}

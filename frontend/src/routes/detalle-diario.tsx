@@ -2,9 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Pencil } from "lucide-react";
 import { AppShell, PageHeading } from "@/components/AppShell";
-import { COMPANIES, hm } from "@/lib/tracker";
+import { PROJECTS, hm } from "@/lib/tracker";
+import { requirePrivateSession } from "@/lib/route-guard";
 
 export const Route = createFileRoute("/detalle-diario")({
+  beforeLoad: requirePrivateSession,
   head: () => ({
     meta: [
       { title: "Detalle de horas y descansos del día · TimeFlow" },
@@ -37,12 +39,12 @@ const toPct = (t: string) => {
 };
 
 function DetallePage() {
-  const [companyId, setCompanyId] = useState(COMPANIES[0]!.id);
+  const [projectId, setProjectId] = useState(PROJECTS[0]!.id);
   const totalWork = ENTRIES.filter((e) => e.kind === "work").reduce((a, e) => a + e.minutes, 0);
   const totalBreak = ENTRIES.filter((e) => e.kind === "break").reduce((a, e) => a + e.minutes, 0);
 
   return (
-    <AppShell companyId={companyId} onCompanyChange={setCompanyId}>
+    <AppShell projectId={projectId} onProjectChange={setProjectId}>
       <PageHeading
         eyebrow="Detalle diario"
         title="Lunes 31 de Agosto · Nuxio"

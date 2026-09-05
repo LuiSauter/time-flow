@@ -1,6 +1,6 @@
 export type TimerStatus = "IDLE" | "WORKING" | "PAUSED";
 
-export type Company = {
+export type Project = {
   id: string;
   name: string;
   dailyGoalMinutes: number;
@@ -18,16 +18,16 @@ export type Segment = {
 
 export type DayRecord = {
   date: string; // yyyy-mm-dd
-  companyId: string;
+  projectId: string;
   workMinutes: number;
   breakMinutes: number;
   goalMinutes: number;
   segments: { kind: "work" | "break"; label: string; from: string; to: string }[];
 };
 
-export const COMPANIES: Company[] = [
+export const PROJECTS: Project[] = [
   { id: "nuxio", name: "Nuxio", dailyGoalMinutes: 480 },
-  { id: "empresa-com", name: "Empresa.com", dailyGoalMinutes: 360 },
+  { id: "focus", name: "Focus", dailyGoalMinutes: 360 },
 ];
 
 export const WEEKDAY_ES = [
@@ -111,15 +111,15 @@ export const HISTORY: DayRecord[] = (() => {
     d.setDate(today.getDate() - i);
     const key = iso(d);
     const weekend = !isWeekday(key);
-    const companyId = i % 4 === 0 ? "empresa-com" : "nuxio";
-    const goal = companyId === "nuxio" ? 480 : 360;
+    const projectId = i % 4 === 0 ? "focus" : "nuxio";
+    const goal = projectId === "nuxio" ? 480 : 360;
     const base = weekend ? 95 : 400 + ((i * 37) % 90);
     const work = weekend && i % 3 !== 0 ? 0 : base;
     if (work === 0) continue;
     const brk = weekend ? 15 : 30 + ((i * 13) % 40);
     out.push({
       date: key,
-      companyId,
+      projectId,
       workMinutes: work,
       breakMinutes: brk,
       goalMinutes: goal,
@@ -133,6 +133,6 @@ export const HISTORY: DayRecord[] = (() => {
   return out;
 })();
 
-export function companyName(id: string) {
-  return COMPANIES.find((c) => c.id === id)?.name ?? id;
+export function projectName(id: string) {
+  return PROJECTS.find((p) => p.id === id)?.name ?? id;
 }

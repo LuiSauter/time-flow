@@ -1,7 +1,8 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronDown, LogOut, Plus } from "lucide-react";
 import type { ReactNode } from "react";
-import { COMPANIES } from "@/lib/tracker";
+import { PROJECTS } from "@/lib/tracker";
+import { clearSession, useAuth } from "@/hooks/useAuth";
 
 const NAV = [
   { to: "/", label: "Home" },
@@ -12,13 +13,29 @@ const NAV = [
 
 export function AppShell({
   children,
-  companyId,
-  onCompanyChange,
+  projectId,
+  onProjectChange,
 }: {
   children: ReactNode;
-  companyId: string;
-  onCompanyChange: (id: string) => void;
+  projectId: string;
+  onProjectChange: (id: string) => void;
 }) {
+  const navigate = useNavigate();
+  const { session } = useAuth();
+  const fullName = session?.user.fullName ?? "Usuario";
+  const initials = fullName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+
+  const logout = () => {
+    clearSession();
+    void navigate({ to: "/auth" });
+  };
+
   return (
     <div className="relative min-h-screen bg-paper text-ink">
       <div className="spectrum pointer-events-none absolute inset-x-0 top-0 h-[22rem]" />
@@ -35,23 +52,23 @@ export function AppShell({
           </Link>
 
           <div className="hidden items-center gap-1 rounded-xl bg-paper p-1 ring-1 ring-black/5 lg:flex">
-            {COMPANIES.map((c) =>
-              c.id === companyId ? (
+            {PROJECTS.map((p) =>
+              p.id === projectId ? (
                 <button
-                  key={c.id}
+                  key={p.id}
                   className="flex h-8 items-center gap-2 rounded-lg bg-panel px-3 text-[13px] font-medium text-ink ring-1 ring-black/5"
                 >
                   <span className="dotwork size-1.5 rounded-full bg-work" />
-                  {c.name}
+                  {p.name}
                   <ChevronDown className="size-3 text-faint" />
                 </button>
               ) : (
                 <button
-                  key={c.id}
-                  onClick={() => onCompanyChange(c.id)}
+                  key={p.id}
+                  onClick={() => onProjectChange(p.id)}
                   className="h-8 rounded-lg px-3 text-[13px] font-medium text-mute transition-colors hover:bg-black/5"
                 >
-                  {c.name}
+                  {p.name}
                 </button>
               ),
             )}
@@ -78,25 +95,28 @@ export function AppShell({
           <div className="ml-auto flex items-center gap-3">
             <div className="hidden items-center gap-2.5 sm:flex">
               <span className="grid size-8 place-items-center rounded-full bg-paper font-clock text-[11px] font-semibold text-mute ring-1 ring-black/5">
-                DF
+                {initials}
               </span>
               <span className="leading-tight">
-                <span className="block text-[13px] font-medium">Diego Ferrer</span>
-                <span className="block text-[11px] text-faint">diego@TimeFlow.io</span>
+                <span className="block text-[13px] font-medium">{fullName}</span>
+                <span className="block text-[11px] text-faint">{session?.user.email}</span>
               </span>
             </div>
-            <Link
-              to="/auth"
+            <button
+              type="button"
+              onClick={logout}
               title="Cerrar sesión"
               className="grid size-8 place-items-center rounded-full text-mute transition-colors hover:bg-black/5"
             >
               <LogOut className="size-4" />
-            </Link>
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="relative mx-auto flex max-w-[1200px] flex-col gap-6 px-6 py-8">{children}</main>
+      <main className="relative mx-auto flex max-w-[1200px] flex-col gap-6 px-6 py-8">
+        {children}
+      </main>
     </div>
   );
 }

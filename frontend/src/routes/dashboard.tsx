@@ -12,16 +12,18 @@ import {
   YAxis,
 } from "recharts";
 import { AppShell, PageHeading, Segmented } from "@/components/AppShell";
-import { COMPANIES, HISTORY, companyName, hm, isWeekday, shortDate } from "@/lib/tracker";
+import { PROJECTS, HISTORY, projectName, hm, isWeekday, shortDate } from "@/lib/tracker";
+import { requirePrivateSession } from "@/lib/route-guard";
 
 export const Route = createFileRoute("/dashboard")({
+  beforeLoad: requirePrivateSession,
   head: () => ({
     meta: [
       { title: "Dashboard de productividad & IA · TimeFlow" },
       {
         name: "description",
         content:
-          "KPIs de horas activas, ratio trabajo/descanso, distribución por empresa e insights generados por IA.",
+          "KPIs de horas activas, ratio trabajo/descanso, distribución por proyecto e insights generados por IA.",
       },
       { property: "og:title", content: "Dashboard de productividad & IA · TimeFlow" },
       {
@@ -52,7 +54,7 @@ const INSIGHTS = [
 ];
 
 function DashboardPage() {
-  const [companyId, setCompanyId] = useState(COMPANIES[0]!.id);
+  const [projectId, setProjectId] = useState(PROJECTS[0]!.id);
   const [scope, setScope] = useState("habiles");
 
   const rows = useMemo(
@@ -67,17 +69,19 @@ function DashboardPage() {
   const totalBreak = rows.reduce((a, r) => a + r.breakMinutes, 0);
   const efficiency = (totalWork / Math.max(1, totalWork + totalBreak)) * 100;
 
-  const barData = [...rows]
-    .reverse()
-    .map((r) => ({ date: shortDate(r.date).slice(0, 6), horas: +(r.workMinutes / 60).toFixed(2), weekday: isWeekday(r.date) }));
+  const barData = [...rows].reverse().map((r) => ({
+    date: shortDate(r.date).slice(0, 6),
+    horas: +(r.workMinutes / 60).toFixed(2),
+    weekday: isWeekday(r.date),
+  }));
 
-  const pieData = COMPANIES.map((c) => ({
+  const pieData = PROJECTS.map((c) => ({
     name: c.name,
-    value: rows.filter((r) => r.companyId === c.id).reduce((a, r) => a + r.workMinutes, 0),
+    value: rows.filter((r) => r.projectId === c.id).reduce((a, r) => a + r.workMinutes, 0),
   }));
 
   return (
-    <AppShell companyId={companyId} onCompanyChange={setCompanyId}>
+    <AppShell projectId={projectId} onProjectChange={setProjectId}>
       <PageHeading
         eyebrow="Dashboard & IA"
         title="Productividad de los últimos 30 días"
@@ -156,11 +160,17 @@ function DashboardPage() {
         </section>
 
         <section className="rim rounded-[16px] bg-panel/60 p-5 ring-1 ring-black/5 backdrop-blur-sm">
-          <h2 className="text-[14px] font-semibold tracking-tight">Distribución por empresa</h2>
+          <h2 className="text-[14px] font-semibold tracking-tight">Distribución por proyecto</h2>
           <div className="mt-2 h-[190px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={pieData} dataKey="value" innerRadius={52} outerRadius={78} strokeWidth={0}>
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  innerRadius={52}
+                  outerRadius={78}
+                  strokeWidth={0}
+                >
                   {pieData.map((_, i) => (
                     <Cell key={i} fill={i === 0 ? "var(--work)" : "var(--rest)"} />
                   ))}
@@ -171,9 +181,7 @@ function DashboardPage() {
           <ul className="mt-2 space-y-2">
             {pieData.map((d, i) => (
               <li key={d.name} className="flex items-center gap-2 text-[13px]">
-                <span
-                  className={`size-2 rounded-full ${i === 0 ? "bg-work" : "bg-rest"}`}
-                />
+                <span className={`size-2 rounded-full ${i === 0 ? "bg-work" : "bg-rest"}`} />
                 <span className="font-medium">{d.name}</span>
                 <span className="ml-auto font-clock tabular-nums text-mute">{hm(d.value)}</span>
               </li>
@@ -183,7 +191,9 @@ function DashboardPage() {
       </div>
 
       <section>
-        <h2 className="text-[14px] font-semibold tracking-tight">Insights & Recomendaciones de la IA</h2>
+        <h2 className="text-[14px] font-semibold tracking-tight">
+          Insights & Recomendaciones de la IA
+        </h2>
         <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
           {INSIGHTS.map((i) => (
             <article key={i.tag} className="rim rounded-[16px] bg-panel/60 p-5 backdrop-blur-sm">
@@ -203,7 +213,7 @@ function DashboardPage() {
           ))}
         </div>
         <p className="mt-3 text-[11px] text-faint">
-          Generado a partir de tus patrones de registro e inactividad · {companyName(companyId)}
+          Generado a partir de tus patrones de registro e inactividad · {projectName(projectId)}
         </p>
       </section>
     </AppShell>

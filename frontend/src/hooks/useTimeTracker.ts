@@ -5,25 +5,25 @@ const STORAGE_KEY = "TimeFlow.session.v1";
 
 export type TrackerState = {
   status: TimerStatus;
-  companyId: string;
+  projectId: string;
   /** Chronological blocks of the active journey. */
   segments: Segment[];
 };
 
-const initialState = (companyId: string): TrackerState => ({
+const initialState = (projectId: string): TrackerState => ({
   status: "IDLE",
-  companyId,
+  projectId,
   segments: [],
 });
 
-function load(companyId: string): TrackerState | null {
+function load(projectId: string): TrackerState | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as TrackerState;
     if (!parsed || typeof parsed.status !== "string") return null;
-    if (parsed.companyId !== companyId) return null;
+    if (parsed.projectId !== projectId) return null;
     return parsed;
   } catch {
     return null;
@@ -37,17 +37,17 @@ const uid = () => Math.random().toString(36).slice(2, 10);
  * Elapsed time is always derived from absolute timestamps, so the counter stays
  * accurate across reloads, tab sleep and background time.
  */
-export function useTimeTracker(companyId: string) {
-  const [state, setState] = useState<TrackerState>(() => initialState(companyId));
+export function useTimeTracker(projectId: string) {
+  const [state, setState] = useState<TrackerState>(() => initialState(projectId));
   const [now, setNow] = useState(() => Date.now());
   const hydrated = useRef(false);
 
   // Rehydrate after mount (SSR-safe).
   useEffect(() => {
-    const persisted = load(companyId);
-    setState(persisted ?? initialState(companyId));
+    const persisted = load(projectId);
+    setState(persisted ?? initialState(projectId));
     hydrated.current = true;
-  }, [companyId]);
+  }, [projectId]);
 
   // Persist every transition.
   useEffect(() => {
@@ -127,7 +127,7 @@ export function useTimeTracker(companyId: string) {
     }));
   }, []);
 
-  const reset = useCallback(() => setState(initialState(companyId)), [companyId]);
+  const reset = useCallback(() => setState(initialState(projectId)), [projectId]);
 
   const addManual = useCallback((start: number, end: number) => {
     setState((prev) => {
