@@ -1,6 +1,6 @@
 export const EnvConfig = () => ({
   APP_NAME: process.env.APP_NAME || 'NestJS-Template',
-  APP_PROD: process.env.APP_PROD || false,
+  APP_PROD: process.env.APP_PROD || 'false',
   APP_VERSION: process.env.APP_VERSION || '0.1.0',
   PORT: process.env.PORT || 3000,
 
@@ -19,8 +19,9 @@ export const EnvConfig = () => ({
   DB_USERNAME: process.env.DB_USERNAME || 'postgres',
   DB_PASSWORD: process.env.DB_PASSWORD || 'postgres',
 
-  HASH_SALT: process.env.HASH_SALT || 10,
+  HASH_SALT: Number(process.env.HASH_SALT || 10),
   JWT_AUTH: process.env.JWT_AUTH || 'secret',
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '1h',
   JWT_RECOVERY: process.env.JWT_RECOVERY || 'secret',
 
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,

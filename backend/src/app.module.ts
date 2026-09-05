@@ -6,6 +6,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSourceConfig } from './config/data.source.js';
 import { ProvidersModule } from './providers/providers.module.js';
+import { AuthModule } from './auth/auth.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -15,6 +16,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     TypeOrmModule.forRoot({ ...DataSourceConfig }),
 
     ProvidersModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

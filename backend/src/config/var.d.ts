@@ -1,7 +1,7 @@
 declare namespace NodeJS {
   interface ProcessEnv {
     APP_NAME: string;
-    APP_PROD: boolean;
+    APP_PROD: string;
     APP_VERSION: string;
     PORT: number;
 
@@ -21,8 +21,9 @@ declare namespace NodeJS {
     DB_USERNAME: string;
     DB_PASSWORD: string;
 
-    HASH_SALT: number;
+    HASH_SALT: string;
     JWT_AUTH: string;
+    JWT_EXPIRES_IN: string;
     JWT_RECOVERY: string;
 
     GOOGLE_CLIENT_ID: string;

@@ -1,22 +1,20 @@
-import { DataSource, DataSourceOptions } from 'typeorm';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { DataSource } from 'typeorm';
+import type { DataSourceOptions } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import 'dotenv/config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-ConfigModule.forRoot({ envFilePath: '.env' });
-const configService = new ConfigService();
-
-const isProd = configService.get('APP_PROD') === 'true';
+const isProd = process.env.APP_PROD === 'true';
 
 export const DataSourceConfig: DataSourceOptions = {
   type: 'postgres',
-  host: configService.get('DB_HOST'),
-  port: configService.get('DB_PORT'),
-  username: configService.get('DB_USERNAME'),
-  password: configService.get('DB_PASSWORD'),
-  database: configService.get('DB_DATABASE'),
+  host: process.env.DB_HOST ?? 'localhost',
+  port: Number(process.env.DB_PORT ?? 5432),
+  username: process.env.DB_USERNAME ?? 'postgres',
+  password: process.env.DB_PASSWORD ?? 'postgres',
+  database: process.env.DB_DATABASE ?? 'postgres',
   entities: [join(__dirname, '/../**/**/*.entity{.ts,.js}')],
   migrations: [join(__dirname, '/../migrations/*{.ts,.js}')],
   migrationsRun: false,

@@ -1,4 +1,4 @@
-import { AppDS } from '@/config/data.source.js';
+import { AppDS } from '../config/data.source.js';
 
 async function runMigrations(): Promise<void> {
   try {
@@ -13,11 +13,8 @@ async function runMigrations(): Promise<void> {
     console.error('[run-migrations] Migration failed:', err);
     try {
       await AppDS.destroy();
-    } catch (destroyErr) {
-      console.error(
-        '[run-migrations] Error destroying data source:',
-        destroyErr,
-      );
+    } catch (_) {
+      // ignore
     }
     process.exit(1);
   }

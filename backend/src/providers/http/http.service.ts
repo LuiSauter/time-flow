@@ -48,7 +48,4 @@ export class HttpCustomService {
     return this.get<T>(url);
   }
 
-  public async apiCheckTokenGoogle<T>(url: string): Promise<T> {
-    return this.get<T>(url);
-  }
 }
