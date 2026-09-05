@@ -7,6 +7,7 @@ export type ApiProject = {
   name: string;
   timeZone: string;
   dailyGoalMinutes: number;
+  hourlyRate: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -51,8 +52,94 @@ export type ManualEntryInput = {
   endTime: string;
 };
 
+export type HistoryPeriod = "week" | "month" | "custom";
+
+export type HistoryFilters = {
+  period: HistoryPeriod;
+  startDate?: string;
+  endDate?: string;
+  onlyWeekdays: boolean;
+  projectId?: string | null;
+};
+
+export type HistoryRow = {
+  date: string;
+  projectId: string;
+  projectName: string;
+  workSeconds: number;
+  breakSeconds: number;
+  activeSeconds: number;
+  goalMinutes: number;
+  goalMet: boolean;
+  hourlyRate: number | null;
+  rateSource: "base" | "dailyOverride" | null;
+  amountUsd: number | null;
+};
+
+export type HistoryTotals = {
+  days: number;
+  workSeconds: number;
+  breakSeconds: number;
+  activeSeconds: number;
+  amountUsd: number | null;
+};
+
+export type HistoryResponse = {
+  rows: HistoryRow[];
+  totals: HistoryTotals;
+};
+
+export type HourlyRateInput = {
+  hourlyRate: number;
+};
+
+export type ProjectRateResponse = {
+  projectId: string;
+  hourlyRate: number;
+  effectiveFrom: string;
+};
+
+export type DailyRateOverrideResponse = {
+  projectId: string;
+  hourlyRate: number;
+  overrideDate: string;
+};
+
 export function getProjects(accessToken: string) {
   return apiRequest<ApiProject[]>("/projects", { accessToken });
+}
+
+export function getHistory(accessToken: string, filters: HistoryFilters) {
+  const query = new URLSearchParams({ period: filters.period });
+  if (filters.startDate) query.set("startDate", filters.startDate);
+  if (filters.endDate) query.set("endDate", filters.endDate);
+  query.set("onlyWeekdays", String(filters.onlyWeekdays));
+  if (filters.projectId) query.set("projectId", filters.projectId);
+  return apiRequest<HistoryResponse>(`/history?${query.toString()}`, { accessToken });
+}
+
+export function setProjectRate(accessToken: string, projectId: string, input: HourlyRateInput) {
+  return apiRequest<ProjectRateResponse>(`/projects/${encodeURIComponent(projectId)}/rate`, {
+    accessToken,
+    method: "PATCH",
+    body: input,
+  });
+}
+
+export function setDailyRateOverride(
+  accessToken: string,
+  projectId: string,
+  date: string,
+  input: HourlyRateInput,
+) {
+  return apiRequest<DailyRateOverrideResponse>(
+    `/projects/${encodeURIComponent(projectId)}/rate-overrides/${encodeURIComponent(date)}`,
+    {
+      accessToken,
+      method: "PUT",
+      body: input,
+    },
+  );
 }
 
 export function createProject(accessToken: string, input: CreateProjectInput) {

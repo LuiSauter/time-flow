@@ -2,11 +2,14 @@ import {
   addManualEntry,
   createProject,
   finishTracker,
+  getHistory,
   getProjects,
   getTracker,
   pauseTracker,
   resumeTracker,
   startTracker,
+  setDailyRateOverride,
+  setProjectRate,
 } from "./tracker";
 
 describe("tracker API contracts", () => {
@@ -53,6 +56,40 @@ describe("tracker API contracts", () => {
         method: "POST",
         body: JSON.stringify({ name: "Nuxio", timeZone: "America/La_Paz" }),
       }),
+    );
+  });
+
+  it("calls history and rate endpoints with their typed inputs", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      return new Response(
+        JSON.stringify(
+          url.includes("/history") ? { rows: [], totals: {} } : { projectId: "project-1" },
+        ),
+        { status: 200 },
+      );
+    });
+
+    await getHistory("token", {
+      period: "custom",
+      startDate: "2026-09-01",
+      endDate: "2026-09-05",
+      onlyWeekdays: false,
+      projectId: "project-1",
+    });
+    await setProjectRate("token", "project-1", { hourlyRate: 7.25 });
+    await setDailyRateOverride("token", "project-1", "2026-09-03", { hourlyRate: 0 });
+
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([
+      "http://localhost:3000/api/history?period=custom&startDate=2026-09-01&endDate=2026-09-05&onlyWeekdays=false&projectId=project-1",
+      "http://localhost:3000/api/projects/project-1/rate",
+      "http://localhost:3000/api/projects/project-1/rate-overrides/2026-09-03",
+    ]);
+    expect(fetchMock.mock.calls[1]?.[1]).toEqual(
+      expect.objectContaining({ method: "PATCH", body: JSON.stringify({ hourlyRate: 7.25 }) }),
+    );
+    expect(fetchMock.mock.calls[2]?.[1]).toEqual(
+      expect.objectContaining({ method: "PUT", body: JSON.stringify({ hourlyRate: 0 }) }),
     );
   });
 });
