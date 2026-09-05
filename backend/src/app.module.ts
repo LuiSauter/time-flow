@@ -7,6 +7,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSourceConfig } from './config/data.source.js';
 import { ProvidersModule } from './providers/providers.module.js';
 import { AuthModule } from './auth/auth.module.js';
+import { ProjectsModule } from './projects/projects.module.js';
+import { TrackerModule } from './tracker/tracker.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -17,6 +19,8 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
     ProvidersModule,
     AuthModule,
+    ProjectsModule,
+    TrackerModule,
   ],
   controllers: [AppController],
   providers: [AppService],
