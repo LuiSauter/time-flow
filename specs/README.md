@@ -12,7 +12,7 @@ Desarrollo guiado por especificación. Cada funcionalidad vive en `specs/[NNN-no
 |---|---|---|
 | [001](./001-autenticacion-email-password/spec.md) | Autenticación con email y contraseña | Maquetado, sin backend |
 | [002](./002-tracker-jornada/spec.md) | Tracker de jornada en tiempo real | Funcional en el navegador |
-| [003](./003-historial/spec.md) | Historial de jornadas | Funcional con datos demo |
+| [003](./003-historial/spec.md) | Historial, filtros y tarifas por proyecto | Tareas definidas |
 | [004](./004-detalle-diario/spec.md) | Detalle diario | Funcional con datos demo |
 | [005](./005-dashboard-ia/spec.md) | Dashboard e insights de IA | Gráficos demo, insights de ejemplo |
 | [006](./006-multiproyecto-personal/spec.md) | Multiproyecto personal | Selector demo, sin persistencia |
