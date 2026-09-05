@@ -31,6 +31,25 @@ describe('errors', () => {
     });
   });
 
+  it('preserves all validation messages from NestJS HTTP errors', () => {
+    const error = toAppError(
+      new HttpException(
+        {
+          statusCode: 400,
+          message: ['El nombre es obligatorio', 'El email no es válido'],
+          error: 'Bad Request',
+        },
+        HttpStatus.BAD_REQUEST,
+      ),
+    );
+
+    expect(error.getResponse()).toMatchObject({
+      statusCode: 400,
+      code: ErrorCode.BAD_REQUEST,
+      message: 'El nombre es obligatorio; El email no es válido',
+    });
+  });
+
   it('normalizes unknown errors without throwing', () => {
     const error = toAppError(new Error('Database unavailable'), 'Fallback');
 

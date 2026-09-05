@@ -1,11 +1,15 @@
 import { DataSource } from 'typeorm';
 import type { DataSourceOptions } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
 import 'dotenv/config';
+import { User } from '../users/user.entity.js';
+import { Project } from '../projects/project.entity.js';
+import { WorkSession } from '../tracker/work-session.entity.js';
+import { TrackerSegment } from '../tracker/tracker-segment.entity.js';
+import { CreateUsers1760000000000 } from '../migrations/1760000000000-create-users.js';
+import { CreateProjects1760000001000 } from '../migrations/1760000001000-create-projects.js';
+import { CreateTracker1760000002000 } from '../migrations/1760000002000-create-tracker.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const isProd = process.env.APP_PROD === 'true';
 
 export const DataSourceConfig: DataSourceOptions = {
@@ -15,8 +19,12 @@ export const DataSourceConfig: DataSourceOptions = {
   username: process.env.DB_USERNAME ?? 'postgres',
   password: process.env.DB_PASSWORD ?? 'postgres',
   database: process.env.DB_DATABASE ?? 'postgres',
-  entities: [join(__dirname, '/../**/**/*.entity{.ts,.js}')],
-  migrations: [join(__dirname, '/../migrations/*{.ts,.js}')],
+  entities: [User, Project, WorkSession, TrackerSegment],
+  migrations: [
+    CreateUsers1760000000000,
+    CreateProjects1760000001000,
+    CreateTracker1760000002000,
+  ],
   migrationsRun: false,
   synchronize: false,
   namingStrategy: new SnakeNamingStrategy(),

@@ -116,6 +116,13 @@ function getResponseMessage(value: unknown, fallback: string): string {
     if (typeof message === 'string' && message.trim().length > 0) {
       return message;
     }
+    if (
+      Array.isArray(message) &&
+      message.every((item): item is string => typeof item === 'string')
+    ) {
+      const messages = message.map((item) => item.trim()).filter(Boolean);
+      if (messages.length > 0) return messages.join('; ');
+    }
   }
 
   return fallback;
