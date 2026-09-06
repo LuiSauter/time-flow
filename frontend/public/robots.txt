@@ -1,14 +1,11 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
 User-agent: *
 Allow: /
+Allow: /og-image.png
+Allow: /site.webmanifest
+Disallow: /auth
+Disallow: /app
+Disallow: /dashboard
+Disallow: /detalle-diario
+Disallow: /historial
+
+Sitemap: https://timeflow.devhooh.com/sitemap.xml

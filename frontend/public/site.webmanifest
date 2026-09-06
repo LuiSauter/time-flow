@@ -1,0 +1,17 @@
+{
+  "name": "Time Flow",
+  "short_name": "Time Flow",
+  "description": "Time tracker gratis para registrar horas de trabajo activo, descansos y productividad.",
+  "lang": "es",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#f7f8fa",
+  "theme_color": "#15171a",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}
