@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState, type FormEvent } from "react";
-import { Plus } from "lucide-react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { Maximize2, Minimize2, Plus } from "lucide-react";
 import { AppShell, PageHeading, Segmented } from "@/components/AppShell";
 import { useTimeTracker } from "@/hooks/useTimeTracker";
 import { useProjects } from "@/hooks/useProjects";
@@ -75,10 +75,22 @@ function MetricCard({
 export function TrackerPage() {
   const { activeProject, activeProjectId } = useProjects();
   const [dayFilter, setDayFilter] = useState("habiles");
+  const [focusMode, setFocusMode] = useState(false);
   const previousDayScope = dayFilter === "todos" ? "all" : "business";
   const tracker = useTimeTracker(activeProjectId ?? "", previousDayScope);
   const project = activeProject;
   const today = useMemo(() => new Date(), []);
+
+  useEffect(() => {
+    if (!focusMode) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFocusMode(false);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [focusMode]);
 
   if (!project) {
     return (
@@ -108,6 +120,118 @@ export function TrackerPage() {
       : hms(tracker.status === "IDLE" ? tracker.totals.workSeconds : tracker.totals.workSeconds);
 
   const [hh, mm, ss] = mainClock.split(":");
+
+  const timerSection = (
+    <section className="rim rounded-[20px] bg-panel/60 px-6 py-8 ring-1 ring-black/5 backdrop-blur-md md:px-10">
+      <div className="flex flex-col gap-6 md:flex-row md:items-center md:gap-10">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-3">
+              <span
+                className={`inline-flex h-7 items-center gap-2 rounded-full px-3 text-[12px] font-semibold tracking-wide ring-1 ${badge.cls}`}
+              >
+                <span className={`size-1.5 rounded-full ${badge.dot}`} />
+                {badge.text}
+              </span>
+              <span className="text-[12px] text-faint">
+                {tracker.status === "IDLE" ? "Sin sesión activa" : "Sesión activa"} · {project.name}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setFocusMode((active) => !active)}
+              aria-label={focusMode ? "Salir del modo focus" : "Activar modo focus"}
+              title={focusMode ? "Salir del modo focus (Esc)" : "Activar modo focus"}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-mute transition-colors hover:bg-black/5 focus:ring-2 focus:ring-ink"
+            >
+              {focusMode ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+              <span className="hidden sm:inline">{focusMode ? "Salir" : "Modo focus"}</span>
+            </button>
+          </div>
+
+          <div
+            className={`mt-3 font-clock text-[clamp(3.5rem,11vw,8rem)] font-medium leading-none tabular-nums tracking-tighter ${
+              tracker.status === "WORKING" ? "tick" : ""
+            }`}
+          >
+            <span className="text-ink">{hh}</span>
+            <span className="text-faint">:</span>
+            <span className="text-ink">{mm}</span>
+            <span className="text-faint">:</span>
+            <span className="text-ink">{ss}</span>
+          </div>
+          <div className="mt-2 font-clock text-[13px] tabular-nums tracking-[0.2em] text-faint">
+            HORAS : MINUTOS : SEGUNDOS
+          </div>
+        </div>
+
+        <div className="flex w-full shrink-0 flex-col gap-2.5 md:w-[260px]">
+          {tracker.status === "IDLE" ? (
+            <button
+              onClick={tracker.startWork}
+              disabled={tracker.isPending}
+              className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-work text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
+            >
+              Comenzar a Trabajar
+            </button>
+          ) : null}
+
+          {tracker.status === "WORKING" ? (
+            <>
+              <button
+                onClick={tracker.startBreak}
+                disabled={tracker.isPending}
+                className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-rest text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
+              >
+                Iniciar Descanso
+              </button>
+              <button
+                onClick={tracker.finishDay}
+                disabled={tracker.isPending}
+                className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-stop text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
+              >
+                Finalizar Jornada y Guardar
+              </button>
+            </>
+          ) : null}
+
+          {tracker.status === "PAUSED" ? (
+            <>
+              <button
+                onClick={tracker.startWork}
+                disabled={tracker.isPending}
+                className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-work text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
+              >
+                Reanudar Trabajo
+              </button>
+              <button
+                onClick={tracker.finishDay}
+                disabled={tracker.isPending}
+                className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-stop text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
+              >
+                Finalizar Jornada y Guardar
+              </button>
+              <div className="mt-1 rounded-[12px] bg-paper px-3.5 py-2.5 ring-1 ring-black/5">
+                <div className="text-[11px] font-medium text-mute">Tiempo en descanso actual</div>
+                <div className="font-clock text-[18px] tabular-nums tracking-tight text-rest">
+                  {hms(tracker.totals.currentSeconds)}
+                </div>
+              </div>
+            </>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  );
+
+  if (focusMode) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-paper px-4 py-6 sm:px-6">
+        <div className="w-full max-w-[1040px]">{timerSection}</div>
+      </div>
+    );
+  }
 
   return (
     <AppShell projectId={project.id} onProjectChange={() => undefined}>
@@ -155,94 +279,7 @@ export function TrackerPage() {
         />
       </div>
 
-      <section className="rim rounded-[20px] bg-panel/60 px-6 py-8 ring-1 ring-black/5 backdrop-blur-md md:px-10">
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:gap-10">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-3">
-              <span
-                className={`inline-flex h-7 items-center gap-2 rounded-full px-3 text-[12px] font-semibold tracking-wide ring-1 ${badge.cls}`}
-              >
-                <span className={`size-1.5 rounded-full ${badge.dot}`} />
-                {badge.text}
-              </span>
-              <span className="text-[12px] text-faint">
-                {tracker.status === "IDLE" ? "Sin sesión activa" : "Sesión activa"} · {project.name}
-              </span>
-            </div>
-
-            <div
-              className={`mt-3 font-clock text-[clamp(3.5rem,11vw,8rem)] font-medium leading-none tabular-nums tracking-tighter ${
-                tracker.status === "WORKING" ? "tick" : ""
-              }`}
-            >
-              <span className="text-ink">{hh}</span>
-              <span className="text-faint">:</span>
-              <span className="text-ink">{mm}</span>
-              <span className="text-faint">:</span>
-              <span className="text-ink">{ss}</span>
-            </div>
-            <div className="mt-2 font-clock text-[13px] tabular-nums tracking-[0.2em] text-faint">
-              HORAS : MINUTOS : SEGUNDOS
-            </div>
-          </div>
-
-          <div className="flex w-full shrink-0 flex-col gap-2.5 md:w-[260px]">
-            {tracker.status === "IDLE" ? (
-              <button
-                onClick={tracker.startWork}
-                disabled={tracker.isPending}
-                className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-work text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
-              >
-                Comenzar a Trabajar
-              </button>
-            ) : null}
-
-            {tracker.status === "WORKING" ? (
-              <>
-                <button
-                  onClick={tracker.startBreak}
-                  disabled={tracker.isPending}
-                  className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-rest text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
-                >
-                  Iniciar Descanso
-                </button>
-                <button
-                  onClick={tracker.finishDay}
-                  disabled={tracker.isPending}
-                  className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-stop text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
-                >
-                  Finalizar Jornada y Guardar
-                </button>
-              </>
-            ) : null}
-
-            {tracker.status === "PAUSED" ? (
-              <>
-                <button
-                  onClick={tracker.startWork}
-                  disabled={tracker.isPending}
-                  className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-work text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
-                >
-                  Reanudar Trabajo
-                </button>
-                <button
-                  onClick={tracker.finishDay}
-                  disabled={tracker.isPending}
-                  className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-stop text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
-                >
-                  Finalizar Jornada y Guardar
-                </button>
-                <div className="mt-1 rounded-[12px] bg-paper px-3.5 py-2.5 ring-1 ring-black/5">
-                  <div className="text-[11px] font-medium text-mute">Tiempo en descanso actual</div>
-                  <div className="font-clock text-[18px] tabular-nums tracking-tight text-rest">
-                    {hms(tracker.totals.currentSeconds)}
-                  </div>
-                </div>
-              </>
-            ) : null}
-          </div>
-        </div>
-      </section>
+      {timerSection}
 
       {tracker.error ? (
         <p role="alert" className="text-[13px] text-stop">
