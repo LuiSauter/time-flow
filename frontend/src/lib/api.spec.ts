@@ -1,4 +1,4 @@
-import { apiRequest, RemoteApiError } from "./auth";
+import { apiRequest, RemoteApiError } from "./api";
 
 describe("authenticated API client", () => {
   afterEach(() => vi.restoreAllMocks());

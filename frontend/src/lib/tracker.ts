@@ -1,4 +1,4 @@
-import { apiRequest } from "./auth";
+import { apiRequest } from "./api";
 
 export type TimerStatus = "IDLE" | "WORKING" | "PAUSED";
 
