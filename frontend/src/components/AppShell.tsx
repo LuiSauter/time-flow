@@ -6,7 +6,7 @@ import { clearSession, useAuth } from "@/hooks/useAuth";
 import { useProjects } from "@/hooks/useProjects";
 
 const NAV = [
-  { to: "/", label: "Home" },
+  { to: "/app", label: "Home" },
   { to: "/historial", label: "Historial" },
   { to: "/detalle-diario", label: "Detalle Diario" },
   { to: "/dashboard", label: "Dashboard & IA" },
@@ -54,13 +54,13 @@ export function AppShell({
 
       <header className="sticky top-0 z-20 border-b border-rim bg-panel/70 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-6 px-6">
-          <Link to="/" className="flex shrink-0 items-center gap-2.5">
+          <Link to="/app" className="flex shrink-0 items-center gap-2.5">
             <span className="grid size-7 place-items-center rounded-lg bg-ink">
               <span className="font-clock text-[11px] font-semibold tracking-tight text-oncolor">
                 04
               </span>
             </span>
-            <span className="text-[15px] font-semibold tracking-tight">TimeFlow</span>
+            <span className="text-[15px] font-semibold tracking-tight">Time Flow</span>
           </Link>
 
           <div className="relative flex min-w-0 flex-1 items-center gap-2">
@@ -140,7 +140,7 @@ export function AppShell({
               <Link
                 key={item.to}
                 to={item.to}
-                activeOptions={{ exact: item.to === "/" }}
+                activeOptions={{ exact: item.to === "/app" }}
                 className="flex h-8 items-center rounded-lg px-3 text-mute transition-colors hover:bg-black/5"
                 activeProps={{ className: "bg-ink text-oncolor hover:bg-ink" }}
               >

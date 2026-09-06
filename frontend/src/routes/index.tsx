@@ -1,409 +1,487 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState, type FormEvent } from "react";
-import { Plus } from "lucide-react";
-import { AppShell, PageHeading, Segmented } from "@/components/AppShell";
-import { useTimeTracker } from "@/hooks/useTimeTracker";
-import { useProjects } from "@/hooks/useProjects";
-import { clockOf, hm, hms, longDate } from "@/lib/tracker";
-import type { ManualEntryInput } from "@/lib/tracker";
-import { requirePrivateSession } from "@/lib/route-guard";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  ArrowRight,
+  Building2,
+  Clock3,
+  LineChart,
+  Pause,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+import type { ReactNode } from "react";
+
+const SITE_URL = (import.meta.env.VITE_SITE_URL ?? "https://timeflow.devhooh.com").replace(
+  /\/$/,
+  "",
+);
+const LANDING_URL = SITE_URL;
+const LANDING_DESCRIPTION =
+  "Time Flow es un time tracker gratis para registrar horas de trabajo activo, descansos y productividad por proyecto, con registros ilimitados.";
+const FAQS = [
+  {
+    question: "¿Time Flow es gratis?",
+    answer:
+      "Sí. Time Flow es gratis para cualquier usuario, sin planes de pago ni límite de registros.",
+  },
+  {
+    question: "¿Puedo registrar horas ilimitadas?",
+    answer: "Sí. Puedes registrar todas las jornadas, descansos y entradas manuales que necesites.",
+  },
+  {
+    question: "¿Time Flow separa el trabajo de los descansos?",
+    answer:
+      "Sí. Cada descanso se registra como un tramo separado para calcular con precisión tus horas activas.",
+  },
+];
+
+const STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      name: "Time Flow",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      url: LANDING_URL,
+      description: LANDING_DESCRIPTION,
+      inLanguage: "es",
+      isAccessibleForFree: true,
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "USD",
+      },
+      author: {
+        "@type": "Person",
+        name: "Luis Gabriel Janco",
+        email: "luis.janco@devhooh.com",
+      },
+      featureList: [
+        "Cronómetro de trabajo activo",
+        "Registro de descansos",
+        "Historial por proyecto",
+        "Dashboard de productividad",
+        "Registros ilimitados",
+      ],
+    },
+    {
+      "@type": "WebSite",
+      name: "Time Flow",
+      url: SITE_URL,
+      inLanguage: "es",
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: FAQS.map(({ question, answer }) => ({
+        "@type": "Question",
+        name: question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: answer,
+        },
+      })),
+    },
+  ],
+};
 
 export const Route = createFileRoute("/")({
-  beforeLoad: requirePrivateSession,
   head: () => ({
     meta: [
-      { title: "TimeFlow · Cronómetro de jornada en tiempo real" },
+      { title: "Time Flow · Mide tus horas activas, no las horas muertas" },
       {
         name: "description",
-        content:
-          "Controla tu jornada activa, descansos y límite diario por proyecto con un cronómetro en tiempo real.",
+        content: LANDING_DESCRIPTION,
       },
-      { property: "og:title", content: "TimeFlow · Cronómetro de jornada en tiempo real" },
+      { name: "robots", content: "index, follow, max-image-preview:large" },
+      { name: "googlebot", content: "index, follow, max-image-preview:large" },
+      { property: "og:title", content: "Time Flow · Mide tus horas activas, no las horas muertas" },
       {
         property: "og:description",
-        content:
-          "Controla tu jornada activa, descansos y límite diario por proyecto con un cronómetro en tiempo real.",
+        content: LANDING_DESCRIPTION,
       },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: LANDING_URL },
+      { property: "og:site_name", content: "Time Flow" },
+      { property: "og:locale", content: "es_BO" },
+      { property: "og:image", content: `${SITE_URL}/og-image.png` },
+      {
+        property: "og:image:alt",
+        content: "Time Flow, time tracker gratis para registrar horas de trabajo",
+      },
+      { property: "og:image:type", content: "image/png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Time Flow · Mide tus horas activas" },
+      { name: "twitter:description", content: LANDING_DESCRIPTION },
+      { name: "twitter:image", content: `${SITE_URL}/og-image.png` },
     ],
+    links: [
+      { rel: "canonical", href: LANDING_URL },
+      { rel: "alternate", hrefLang: "es", href: LANDING_URL },
+      { rel: "manifest", href: "/site.webmanifest" },
+    ],
+    scripts: [{ type: "application/ld+json", children: JSON.stringify(STRUCTURED_DATA) }],
   }),
-  component: TrackerPage,
+  component: LandingPage,
 });
 
-function MetricCard({
-  label,
-  value,
-  hint,
-  tone,
-  right,
-  progress,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  tone?: "work" | "rest";
-  right?: string;
-  progress?: number;
-}) {
-  const toneClass = tone === "work" ? "text-work" : tone === "rest" ? "text-rest" : "text-ink";
+function Eyebrow({ children }: { children: ReactNode }) {
   return (
-    <div className="rim rounded-[14px] bg-panel/70 px-4 py-3.5 backdrop-blur-sm">
-      <div className="flex items-baseline justify-between">
-        <span className="text-[11px] font-medium text-mute">{label}</span>
-        {right ? (
-          <span className="font-clock text-[12px] tabular-nums text-faint">{right}</span>
-        ) : null}
-      </div>
-      <div
-        className={`mt-1 font-clock text-[26px] font-medium tabular-nums tracking-tight ${toneClass}`}
-      >
-        {value}
-      </div>
-      {hint ? <div className="mt-0.5 text-[11px] text-faint">{hint}</div> : null}
-      {progress !== undefined ? (
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/5">
-          <div
-            className="h-full rounded-full bg-work"
-            style={{ width: `${Math.min(100, Math.round(progress * 100))}%` }}
-          />
-        </div>
-      ) : null}
-    </div>
+    <p className="font-clock text-[11px] lowercase tracking-[0.18em] text-faint">{children}</p>
   );
 }
 
-export function TrackerPage() {
-  const { activeProject, activeProjectId } = useProjects();
-  const [dayFilter, setDayFilter] = useState("habiles");
-  const previousDayScope = dayFilter === "todos" ? "all" : "business";
-  const tracker = useTimeTracker(activeProjectId ?? "", previousDayScope);
-  const project = activeProject;
-  const today = useMemo(() => new Date(), []);
+const FEATURES = [
+  {
+    icon: Clock3,
+    title: "Cronómetro real",
+    body: "Inicia, pausa y cierra la jornada. El tiempo corre con marcas absolutas, aunque cierres la pestaña.",
+  },
+  {
+    icon: Pause,
+    title: "Descansos aparte",
+    body: "Cada pausa se guarda como su propio tramo y nunca contamina tus horas productivas.",
+  },
+  {
+    icon: Building2,
+    title: "Multiempresa",
+    body: "Cambia de empresa en un clic. Metas, zona horaria y reportes independientes por espacio.",
+  },
+  {
+    icon: LineChart,
+    title: "Historial y detalle",
+    body: "Filtra por semana, mes o días hábiles y abre la línea de tiempo hora por hora de cualquier día.",
+  },
+  {
+    icon: Sparkles,
+    title: "Insights con IA",
+    body: "Resúmenes de eficiencia, mejores franjas horarias y avisos cuando la meta se aleja.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Privado por defecto",
+    body: "Cada registro pertenece solo a tu cuenta. Nadie más ve tu jornada sin permiso.",
+  },
+];
 
-  if (!project) {
-    return (
-      <AppShell projectId="" onProjectChange={() => undefined}>
-        <div className="rounded-[16px] bg-panel/60 p-6 text-[13px] text-mute">
-          Cargando proyecto...
-        </div>
-      </AppShell>
-    );
-  }
+const STATS = [
+  { value: "100%", label: "gratis para cualquier usuario" },
+  { value: "∞", label: "registros ilimitados" },
+  { value: "3", label: "estados: activo, pausa, cerrado" },
+  { value: "100%", label: "de tus datos, privados" },
+];
 
-  const workMinutes = (tracker.metrics?.workSeconds ?? tracker.totals.workSeconds) / 60;
-  const breakMinutes = (tracker.metrics?.breakSeconds ?? tracker.totals.breakSeconds) / 60;
-  const goalMinutes = tracker.metrics?.dailyGoalMinutes ?? project.dailyGoalMinutes;
-  const goalRatio = workMinutes / goalMinutes;
-
-  const badge =
-    tracker.status === "WORKING"
-      ? { text: "TRABAJANDO", cls: "bg-work/10 text-work ring-work/20", dot: "bg-work dotwork" }
-      : tracker.status === "PAUSED"
-        ? { text: "EN DESCANSO", cls: "bg-rest/10 text-rest ring-rest/20", dot: "bg-rest" }
-        : { text: "DETENIDO", cls: "bg-black/5 text-mute ring-black/10", dot: "bg-faint" };
-
-  const mainClock =
-    tracker.status === "PAUSED"
-      ? hms(tracker.totals.workSeconds)
-      : hms(tracker.status === "IDLE" ? tracker.totals.workSeconds : tracker.totals.workSeconds);
-
-  const [hh, mm, ss] = mainClock.split(":");
-
+function LandingPage() {
   return (
-    <AppShell projectId={project.id} onProjectChange={() => undefined}>
-      <PageHeading
-        eyebrow="Hoy"
-        title={longDate(today)}
-        aside={
-          <div className="flex items-center gap-3">
-            <span className="text-[12px] font-medium text-mute">Filtro</span>
-            <Segmented
-              value={dayFilter}
-              onChange={setDayFilter}
-              options={[
-                { value: "habiles", label: "Días hábiles (L-V)" },
-                { value: "todos", label: "Todos los días (L-D)" },
-              ]}
-            />
-          </div>
-        }
-      />
+    <div className="relative min-h-screen bg-paper text-ink">
+      <div className="spectrum pointer-events-none absolute inset-x-0 top-0 h-[30rem]" />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetricCard
-          label="Ayer"
-          value={hm((tracker.previousDay?.activeSeconds ?? 0) / 60)}
-          hint={tracker.previousDay?.goalMet ? "Cumplió meta" : "No cumplió meta"}
-        />
-        <MetricCard
-          label="Hoy · en curso"
-          value={hm(workMinutes)}
-          tone="work"
-          hint={`${tracker.segments.filter((s) => s.kind === "work").length} bloques activos`}
-        />
-        <MetricCard
-          label="Descanso hoy"
-          value={hm(breakMinutes)}
-          tone="rest"
-          hint={`${tracker.segments.filter((s) => s.kind === "break").length} pausas registradas`}
-        />
-        <MetricCard
-          label="Límite diario"
-          right={hm(goalMinutes)}
-          value={hm(workMinutes)}
-          progress={goalRatio}
-        />
-      </div>
-
-      <section className="rim rounded-[20px] bg-panel/60 px-6 py-8 ring-1 ring-black/5 backdrop-blur-md md:px-10">
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:gap-10">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-20 border-b border-rim bg-panel/70 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-[1120px] items-center gap-3 px-6">
+          <Link to="/" aria-label="Time Flow, inicio" className="flex items-center gap-2.5">
+            <span className="grid size-7 place-items-center rounded-lg bg-ink">
               <span
-                className={`inline-flex h-7 items-center gap-2 rounded-full px-3 text-[12px] font-semibold tracking-wide ring-1 ${badge.cls}`}
+                aria-hidden="true"
+                className="font-clock text-[11px] font-semibold text-oncolor"
               >
-                <span className={`size-1.5 rounded-full ${badge.dot}`} />
-                {badge.text}
+                04
               </span>
-              <span className="text-[12px] text-faint">
-                {tracker.status === "IDLE" ? "Sin sesión activa" : "Sesión activa"} · {project.name}
-              </span>
-            </div>
-
-            <div
-              className={`mt-3 font-clock text-[clamp(3.5rem,11vw,8rem)] font-medium leading-none tabular-nums tracking-tighter ${
-                tracker.status === "WORKING" ? "tick" : ""
-              }`}
-            >
-              <span className="text-ink">{hh}</span>
-              <span className="text-faint">:</span>
-              <span className="text-ink">{mm}</span>
-              <span className="text-faint">:</span>
-              <span className="text-ink">{ss}</span>
-            </div>
-            <div className="mt-2 font-clock text-[13px] tabular-nums tracking-[0.2em] text-faint">
-              HORAS : MINUTOS : SEGUNDOS
-            </div>
-          </div>
-
-          <div className="flex w-full shrink-0 flex-col gap-2.5 md:w-[260px]">
-            {tracker.status === "IDLE" ? (
-              <button
-                onClick={tracker.startWork}
-                disabled={tracker.isPending}
-                className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-work text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
-              >
-                Comenzar a Trabajar
-              </button>
-            ) : null}
-
-            {tracker.status === "WORKING" ? (
-              <>
-                <button
-                  onClick={tracker.startBreak}
-                  disabled={tracker.isPending}
-                  className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-rest text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
-                >
-                  Iniciar Descanso
-                </button>
-                <button
-                  onClick={tracker.finishDay}
-                  disabled={tracker.isPending}
-                  className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-stop text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
-                >
-                  Finalizar Jornada y Guardar
-                </button>
-              </>
-            ) : null}
-
-            {tracker.status === "PAUSED" ? (
-              <>
-                <button
-                  onClick={tracker.startWork}
-                  disabled={tracker.isPending}
-                  className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-work text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
-                >
-                  Reanudar Trabajo
-                </button>
-                <button
-                  onClick={tracker.finishDay}
-                  disabled={tracker.isPending}
-                  className="flex h-11 items-center justify-center gap-2 rounded-[12px] bg-stop text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5"
-                >
-                  Finalizar Jornada y Guardar
-                </button>
-                <div className="mt-1 rounded-[12px] bg-paper px-3.5 py-2.5 ring-1 ring-black/5">
-                  <div className="text-[11px] font-medium text-mute">Tiempo en descanso actual</div>
-                  <div className="font-clock text-[18px] tabular-nums tracking-tight text-rest">
-                    {hms(tracker.totals.currentSeconds)}
-                  </div>
-                </div>
-              </>
-            ) : null}
-          </div>
-        </div>
-      </section>
-
-      {tracker.error ? (
-        <p role="alert" className="text-[13px] text-stop">
-          {tracker.error}
-        </p>
-      ) : null}
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="rim overflow-hidden rounded-[16px] bg-panel/60 ring-1 ring-black/5 backdrop-blur-sm lg:col-span-2">
-          <div className="flex items-center justify-between border-b border-rim px-5 py-3.5">
-            <h2 className="text-[14px] font-semibold tracking-tight">Sesiones del día</h2>
-            <span className="font-clock text-[12px] tabular-nums text-faint">
-              {tracker.segments.length} bloques
             </span>
-          </div>
-          <div className="divide-y divide-black/5">
-            {tracker.segments.length === 0 ? (
-              <p className="px-5 py-8 text-center text-[13px] text-faint">
-                Aún no hay bloques hoy. Pulsa «Comenzar a Trabajar» para abrir el primero.
-              </p>
-            ) : (
-              tracker.segments.map((s) => {
-                const running = s.end === null;
-                const seconds = ((s.end ?? tracker.now) - s.start) / 1000;
-                return (
-                  <div
-                    key={s.id}
-                    className={`flex items-center gap-4 px-5 py-3 ${running ? "bg-work/5" : ""}`}
-                  >
-                    <span
-                      className={`size-2 shrink-0 rounded-full ${
-                        s.kind === "work" ? "bg-work" : "bg-rest"
-                      } ${running ? "dotwork" : ""}`}
-                    />
-                    <span className="w-[112px] shrink-0 font-clock text-[13px] tabular-nums text-mute">
-                      {clockOf(s.start)} – {running ? "En curso" : clockOf(s.end!)}
-                    </span>
-                    <span className="text-[13px] font-medium">
-                      {s.label} · {s.kind === "work" ? "Trabajo activo" : "Descanso"}
-                    </span>
-                    <span
-                      className={`ml-auto font-clock text-[13px] tabular-nums ${
-                        running ? "text-work" : "text-ink"
-                      }`}
-                    >
-                      {running ? hms(seconds) : hm(seconds / 60)}
-                    </span>
-                  </div>
-                );
-              })
-            )}
-          </div>
+            <span className="text-[15px] font-semibold tracking-tight">Time Flow</span>
+          </Link>
+          <nav aria-label="Navegación de acceso" className="ml-auto flex items-center gap-2">
+            <span className="mr-1 hidden font-clock text-[11px] lowercase tracking-[0.16em] text-faint sm:block">
+              time_tracker/activo
+            </span>
+            <Link
+              to="/auth"
+              search={{ mode: "login" }}
+              className="flex h-9 items-center rounded-[10px] px-3 text-[13px] font-medium text-mute transition-colors hover:bg-black/5"
+            >
+              Iniciar sesión
+            </Link>
+            <Link
+              to="/auth"
+              search={{ mode: "register" }}
+              className="flex h-9 items-center rounded-[10px] bg-ink px-4 text-[13px] font-semibold text-oncolor transition-transform hover:-translate-y-0.5"
+            >
+              Crear cuenta
+            </Link>
+          </nav>
         </div>
+      </header>
 
-        <ManualEntryCard onAdd={tracker.addManual} />
-      </div>
-    </AppShell>
-  );
-}
-
-export function ManualEntryCard({
-  onAdd,
-}: {
-  onAdd: (input: ManualEntryInput) => Promise<unknown>;
-}) {
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [from, setFrom] = useState("15:30");
-  const [to, setTo] = useState("16:15");
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!date || !from || !to) {
-      setError("Completa todos los campos");
-      return;
-    }
-    if (to <= from) {
-      setError("La hora de fin debe ser posterior a la de inicio");
-      return;
-    }
-
-    setError(null);
-    setIsSubmitting(true);
-    try {
-      await onAdd({ date, startTime: from, endTime: to });
-    } catch (submissionError) {
-      setError(
-        submissionError instanceof Error
-          ? submissionError.message
-          : "No se pudo guardar el registro",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <form
-      onSubmit={submit}
-      className="rim flex flex-col rounded-[16px] bg-panel/60 p-5 ring-1 ring-black/5 backdrop-blur-sm"
-    >
-      <h2 className="text-[14px] font-semibold tracking-tight">Registro manual</h2>
-      <p className="mt-1 max-w-[30ch] text-pretty text-[13px] text-mute">
-        Captura horas que no se registraron en tiempo real. Sin límite de entradas.
-      </p>
-      <div className="mt-4 grid gap-2">
-        <label
-          htmlFor="manual-date"
-          className="rounded-[10px] bg-paper px-3 py-2.5 ring-1 ring-black/5"
+      <main className="relative mx-auto max-w-[1120px] px-6">
+        <section
+          aria-labelledby="hero-title"
+          className="grid gap-10 py-20 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:py-28"
         >
-          <span className="block text-[11px] font-medium text-faint">Fecha</span>
-          <input
-            id="manual-date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full bg-transparent font-clock text-[13px] tabular-nums outline-none"
-          />
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          <label
-            htmlFor="manual-start"
-            className="rounded-[10px] bg-paper px-3 py-2.5 ring-1 ring-black/5"
+          <div>
+            <Eyebrow>la_idea_completa</Eyebrow>
+            <h1
+              id="hero-title"
+              className="mt-4 text-balance text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl"
+            >
+              Tu jornada dura 9 horas. Tu trabajo activo, no.
+            </h1>
+            <p className="mt-5 max-w-[52ch] text-pretty text-[15px] leading-relaxed text-mute">
+              Time Flow cronometra el tiempo que realmente trabajas, separa cada descanso y elimina
+              las horas muertas del cálculo. Gratis, sin límites y sin estimar a ojo.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Link
+                to="/auth"
+                search={{ mode: "register" }}
+                className="flex h-11 items-center gap-2 rounded-[12px] bg-ink px-5 text-[14px] font-semibold text-oncolor transition-transform hover:-translate-y-0.5"
+              >
+                Empezar gratis
+                <ArrowRight aria-hidden="true" className="size-4" />
+              </Link>
+              <Link
+                to="/app"
+                className="flex h-11 items-center rounded-[12px] bg-panel px-5 text-[14px] font-medium text-ink ring-1 ring-black/5 transition-colors hover:bg-black/5"
+              >
+                Ver el tracker
+              </Link>
+            </div>
+            <p className="mt-4 font-clock text-[11px] lowercase tracking-[0.14em] text-faint">
+              // gratis para todos · registros ilimitados · zona horaria de bolivia por defecto
+            </p>
+          </div>
+
+          <aside
+            aria-label="Vista previa del registro de jornada"
+            className="rim rounded-[20px] bg-panel/80 p-6 backdrop-blur-md"
           >
-            <span className="block text-[11px] font-medium text-faint">Inicio</span>
-            <input
-              id="manual-start"
-              type="time"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              className="w-full bg-transparent font-clock text-[13px] tabular-nums outline-none"
-            />
-          </label>
-          <label
-            htmlFor="manual-end"
-            className="rounded-[10px] bg-paper px-3 py-2.5 ring-1 ring-black/5"
+            <div className="flex items-center justify-between">
+              <span className="font-clock text-[11px] lowercase tracking-[0.16em] text-faint">
+                jornada_hoy
+              </span>
+              <span className="flex items-center gap-1.5 rounded-full bg-paper px-2.5 py-1 text-[11px] font-medium text-mute ring-1 ring-black/5">
+                <span aria-hidden="true" className="dotwork size-1.5 rounded-full bg-work" />
+                Activo
+              </span>
+            </div>
+            <output
+              aria-label="Tiempo activo de la jornada"
+              className="mt-5 block font-clock text-[46px] font-semibold leading-none tracking-tight tabular-nums sm:text-[56px]"
+            >
+              06:12:44
+            </output>
+            <div className="mt-2 text-[12.5px] text-mute">Meta diaria 8 h · faltan 1 h 47 m</div>
+
+            <div className="mt-6 flex h-2.5 overflow-hidden rounded-full bg-paper ring-1 ring-black/5">
+              <span className="h-full w-[62%] bg-work" />
+              <span className="h-full w-[11%] bg-rest" />
+            </div>
+
+            <dl className="mt-6 grid grid-cols-3 gap-3">
+              {[
+                ["Activo", "6 h 12 m", "text-work"],
+                ["Descanso", "48 m", "text-rest"],
+                ["Muertas", "1 h 09 m", "text-stop"],
+              ].map(([label, value, tone]) => (
+                <div key={label} className="rounded-[12px] bg-paper p-3 ring-1 ring-black/5">
+                  <dt className="text-[11px] font-medium text-faint">{label}</dt>
+                  <dd className={`mt-1 font-clock text-[15px] font-semibold tabular-nums ${tone}`}>
+                    {value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+
+            <ol
+              aria-label="Segmentos de la jornada"
+              className="mt-5 space-y-2 font-clock text-[11.5px] text-mute"
+            >
+              <li className="flex justify-between">
+                <span>
+                  <time dateTime="08:32">08:32</time> → <time dateTime="11:04">11:04</time> trabajo
+                </span>
+                <span className="tabular-nums text-ink">2 h 32 m</span>
+              </li>
+              <li className="flex justify-between">
+                <span>
+                  <time dateTime="11:04">11:04</time> → <time dateTime="11:22">11:22</time> descanso
+                </span>
+                <span className="tabular-nums text-ink">18 m</span>
+              </li>
+              <li className="flex justify-between">
+                <span>
+                  <time dateTime="11:22">11:22</time> → <time dateTime="15:02">15:02</time> trabajo
+                </span>
+                <span className="tabular-nums text-ink">3 h 40 m</span>
+              </li>
+            </ol>
+          </aside>
+        </section>
+
+        <section aria-labelledby="benefits-title" className="border-t border-rim py-14">
+          <Eyebrow>lo_que_recuperas</Eyebrow>
+          <h2 id="benefits-title" className="sr-only">
+            Beneficios de Time Flow
+          </h2>
+          <dl className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {STATS.map((s) => (
+              <div key={s.label} className="flex flex-col">
+                <dt className="order-2 mt-1.5 text-[12.5px] leading-relaxed text-mute">
+                  {s.label}
+                </dt>
+                <dd className="order-1 font-clock text-3xl font-semibold tracking-tight tabular-nums">
+                  {s.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-6 font-clock text-[11px] lowercase tracking-[0.14em] text-faint">
+            // sin planes de pago · registra todo lo que necesites
+          </p>
+        </section>
+
+        <section
+          aria-labelledby="steps-title"
+          className="grid gap-10 border-t border-rim py-16 lg:grid-cols-[0.9fr_1.1fr]"
+        >
+          <div>
+            <Eyebrow>la_escalera</Eyebrow>
+            <h2
+              id="steps-title"
+              className="mt-4 text-balance text-3xl font-semibold tracking-tight"
+            >
+              Cuatro pasos y tu día queda medido.
+            </h2>
+            <p className="mt-4 max-w-[46ch] text-[14px] leading-relaxed text-mute">
+              Nada de formularios largos ni reportes manuales al final de la semana. El registro
+              ocurre mientras trabajas.
+            </p>
+          </div>
+          <ol className="space-y-4">
+            {[
+              ["Entra con tu cuenta", "Google o correo. Tu espacio queda listo en segundos."],
+              ["Pulsa iniciar", "El cronómetro corre en segundo plano, incluso si recargas."],
+              ["Marca tus descansos", "Cada pausa se separa sola del tiempo productivo."],
+              ["Cierra la jornada", "El día se guarda en el historial con su detalle completo."],
+            ].map(([title, body], i) => (
+              <li
+                key={title}
+                className="rim flex gap-4 rounded-[14px] bg-panel/70 p-4 backdrop-blur-sm"
+              >
+                <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-ink font-clock text-[11px] font-semibold text-oncolor">
+                  {i + 1}
+                </span>
+                <div>
+                  <h3 className="text-[14px] font-semibold tracking-tight">{title}</h3>
+                  <div className="mt-1 text-[12.5px] leading-relaxed text-mute">{body}</div>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section aria-labelledby="features-title" className="border-t border-rim py-16">
+          <Eyebrow>capacidades</Eyebrow>
+          <h2
+            id="features-title"
+            className="mt-4 max-w-[24ch] text-balance text-3xl font-semibold tracking-tight"
           >
-            <span className="block text-[11px] font-medium text-faint">Fin</span>
-            <input
-              id="manual-end"
-              type="time"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              className="w-full bg-transparent font-clock text-[13px] tabular-nums outline-none"
-            />
-          </label>
+            Todo lo que necesita un control de horas serio.
+          </h2>
+          <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map((f) => (
+              <li key={f.title} className="rim rounded-[16px] bg-panel/70 p-5 backdrop-blur-sm">
+                <span className="grid size-9 place-items-center rounded-[10px] bg-paper text-ink ring-1 ring-black/5">
+                  <f.icon aria-hidden="true" className="size-4" />
+                </span>
+                <h3 className="mt-4 text-[14px] font-semibold tracking-tight">{f.title}</h3>
+                <p className="mt-1.5 text-[12.5px] leading-relaxed text-mute">{f.body}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section aria-labelledby="faq-title" className="border-t border-rim py-16">
+          <Eyebrow>preguntas_frecuentes</Eyebrow>
+          <h2 id="faq-title" className="mt-4 text-balance text-3xl font-semibold tracking-tight">
+            Todo claro antes de empezar.
+          </h2>
+          <dl className="mt-8 divide-y divide-black/5 rounded-[16px] bg-panel/60 ring-1 ring-black/5">
+            {FAQS.map(({ question, answer }) => (
+              <div key={question} className="p-5">
+                <dt className="text-[14px] font-semibold tracking-tight">{question}</dt>
+                <dd className="mt-2 text-[13px] leading-relaxed text-mute">{answer}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+
+        <section aria-labelledby="cta-title" className="border-t border-rim py-20">
+          <div className="rim overflow-hidden rounded-[20px] bg-ink px-8 py-12 text-center text-oncolor">
+            <div className="font-clock text-[11px] lowercase tracking-[0.18em] text-oncolor/60">
+              empieza_hoy
+            </div>
+            <h2
+              id="cta-title"
+              className="mx-auto mt-4 max-w-[22ch] text-balance text-3xl font-semibold tracking-tight"
+            >
+              Deja de estimar tus horas. Mídelas.
+            </h2>
+            <p className="mx-auto mt-3 max-w-[48ch] text-[14px] leading-relaxed text-oncolor/70">
+              Crea tu cuenta y registra tu primera jornada en menos de un minuto.
+            </p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Link
+                to="/auth"
+                search={{ mode: "register" }}
+                className="flex h-11 items-center gap-2 rounded-[12px] bg-panel px-5 text-[14px] font-semibold text-ink transition-transform hover:-translate-y-0.5"
+              >
+                Crear cuenta
+                <ArrowRight aria-hidden="true" className="size-4" />
+              </Link>
+              <Link
+                to="/auth"
+                search={{ mode: "login" }}
+                className="flex h-11 items-center rounded-[12px] px-5 text-[14px] font-medium text-oncolor/80 ring-1 ring-white/20 transition-colors hover:bg-white/10"
+              >
+                Ya tengo cuenta
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-rim">
+        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-4 px-6 py-8">
+          <small className="font-clock text-[11px] lowercase tracking-[0.16em] text-faint">
+            time flow · gratis para todos · registros ilimitados
+          </small>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <nav
+              aria-label="Navegación del pie de página"
+              className="flex gap-4 text-[12.5px] text-mute"
+            >
+              <Link to="/app" className="hover:text-ink">
+                Tracker
+              </Link>
+              <Link to="/historial" className="hover:text-ink">
+                Historial
+              </Link>
+              <Link to="/dashboard" className="hover:text-ink">
+                Dashboard
+              </Link>
+              <Link to="/detalle-diario" className="hover:text-ink">
+                Detalle Diario
+              </Link>
+            </nav>
+            <address className="text-[12px] not-italic text-faint">
+              Desarrollado por Luis Gabriel Janco · Soporte:{" "}
+              <a className="text-mute hover:text-ink" href="mailto:luis.janco@devhooh.com">
+                luis.janco@devhooh.com
+              </a>
+            </address>
+          </div>
         </div>
-      </div>
-      {error ? (
-        <p role="alert" className="mt-3 text-[12px] text-stop">
-          {error}
-        </p>
-      ) : null}
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="mt-5 flex h-11 items-center justify-center gap-2 rounded-[12px] bg-ink text-[14px] font-semibold text-oncolor ring-1 ring-black/5 transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        <Plus className="size-4" />
-        {isSubmitting ? "Guardando..." : "Registrar Horas Manualmente"}
-      </button>
-    </form>
+      </footer>
+    </div>
   );
 }

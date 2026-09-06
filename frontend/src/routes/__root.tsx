@@ -81,14 +81,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "Time Flow · Seguimiento de horas de trabajo" },
+      {
+        name: "description",
+        content: "Registra tu tiempo de trabajo activo, descansos y productividad con Time Flow.",
+      },
+      { name: "author", content: "Luis Gabriel Janco" },
+      { property: "og:title", content: "Time Flow · Seguimiento de horas de trabajo" },
+      {
+        property: "og:description",
+        content: "Registra tu tiempo de trabajo activo, descansos y productividad con Time Flow.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
+      { name: "theme-color", content: "#15171a" },
     ],
     links: [
       {
@@ -96,6 +102,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: appCss,
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "manifest", href: "/site.webmanifest" },
     ],
   }),
   shellComponent: RootShell,
@@ -106,7 +113,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="es">
       <head>
         <HeadContent />
       </head>
@@ -123,20 +130,21 @@ function RootComponent() {
   const { session, status } = useAuth();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const navigate = useNavigate();
+  const isPublicRoute = pathname === "/auth" || pathname === "/";
 
   useEffect(() => {
     if (status === "loading") return;
     if (status === "authenticated" && pathname === "/auth") {
+      void navigate({ to: "/app" });
+    } else if (status === "unauthenticated" && !isPublicRoute) {
       void navigate({ to: "/" });
-    } else if (status === "unauthenticated" && pathname !== "/auth") {
-      void navigate({ to: "/auth" });
     }
-  }, [navigate, pathname, status]);
+  }, [isPublicRoute, navigate, pathname, status]);
 
   if (
     status === "loading" ||
     (status === "authenticated" && pathname === "/auth") ||
-    (status === "unauthenticated" && pathname !== "/auth")
+    (status === "unauthenticated" && !isPublicRoute)
   ) {
     return <div className="min-h-screen bg-paper" aria-label="Cargando sesión" />;
   }

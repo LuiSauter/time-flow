@@ -6,33 +6,40 @@ import { requireGuestSession } from "@/lib/route-guard";
 
 export const Route = createFileRoute("/auth")({
   beforeLoad: requireGuestSession,
+  validateSearch: (search: Record<string, unknown>): AuthSearch => ({
+    mode: search.mode === "register" ? "register" : "login",
+  }),
   head: () => ({
     meta: [
-      { title: "Iniciar sesión · TimeFlow" },
+      { title: "Iniciar sesión · Time Flow" },
+      { name: "robots", content: "noindex, nofollow" },
       {
         name: "description",
         content:
-          "Accede a TimeFlow con tu email y contraseña. Tus registros de tiempo son privados y únicos para tu cuenta.",
+          "Accede a Time Flow con tu email y contraseña. Tus registros de tiempo son privados y únicos para tu cuenta.",
       },
-      { property: "og:title", content: "Iniciar sesión · TimeFlow" },
+      { property: "og:title", content: "Iniciar sesión · Time Flow" },
       {
         property: "og:description",
-        content: "Accede a TimeFlow con tu email y controla tus horas de trabajo activo.",
+        content: "Accede a Time Flow con tu email y controla tus horas de trabajo activo.",
       },
     ],
   }),
   component: AuthPage,
 });
 
+type AuthSearch = { mode: "login" | "register" };
+
 function AuthPage() {
   const navigate = useNavigate();
+  const { mode } = Route.useSearch();
 
   const handleSubmit = async (
     values: Parameters<typeof register>[0] | Parameters<typeof login>[0],
   ) => {
     const session = "fullName" in values ? await register(values) : await login(values);
     setSession(session);
-    await navigate({ to: "/" });
+    await navigate({ to: "/app" });
   };
 
   return (
@@ -46,7 +53,7 @@ function AuthPage() {
               04
             </span>
           </span>
-          <span className="text-[15px] font-semibold tracking-tight">TimeFlow</span>
+          <span className="text-[15px] font-semibold tracking-tight">Time Flow</span>
         </div>
 
         <h1 className="mt-8 text-balance text-2xl font-semibold tracking-tight">
@@ -56,7 +63,7 @@ function AuthPage() {
           Registra tu jornada activa, tus descansos y elimina las horas muertas.
         </p>
 
-        <AuthForm onSubmit={handleSubmit} />
+        <AuthForm mode={mode} onSubmit={handleSubmit} />
 
         <button
           type="button"

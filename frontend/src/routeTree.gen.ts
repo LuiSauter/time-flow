@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/app'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DetalleDiarioRouteImport } from './routes/detalle-diario'
@@ -18,6 +19,11 @@ import { Route as HistorialRouteImport } from './routes/historial'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -43,6 +49,7 @@ const HistorialRoute = HistorialRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/app': typeof AppRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/detalle-diario': typeof DetalleDiarioRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/app': typeof AppRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/detalle-diario': typeof DetalleDiarioRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/app': typeof AppRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/detalle-diario': typeof DetalleDiarioRoute
@@ -65,15 +74,23 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard' | '/detalle-diario' | '/historial'
+  fullPaths:
+    '/' | '/app' | '/auth' | '/dashboard' | '/detalle-diario' | '/historial'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard' | '/detalle-diario' | '/historial'
+  to: '/' | '/app' | '/auth' | '/dashboard' | '/detalle-diario' | '/historial'
   id:
-    '__root__' | '/' | '/auth' | '/dashboard' | '/detalle-diario' | '/historial'
+    | '__root__'
+    | '/'
+    | '/app'
+    | '/auth'
+    | '/dashboard'
+    | '/detalle-diario'
+    | '/historial'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRoute
   AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
   DetalleDiarioRoute: typeof DetalleDiarioRoute
@@ -87,6 +104,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -122,6 +146,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRoute,
   AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
   DetalleDiarioRoute: DetalleDiarioRoute,

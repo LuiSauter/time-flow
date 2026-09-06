@@ -16,6 +16,6 @@ export async function requireGuestSession(): Promise<void> {
     await initializeAuth();
   }
   if (typeof window !== "undefined" && canAccessPrivateRoute()) {
-    throw redirect({ to: "/" });
+    throw redirect({ to: "/app" });
   }
 }

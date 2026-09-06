@@ -12,13 +12,14 @@ export const Route = createFileRoute("/historial")({
   beforeLoad: requirePrivateSession,
   head: () => ({
     meta: [
-      { title: "Historial de horas por día · TimeFlow" },
+      { title: "Historial de horas por día · Time Flow" },
+      { name: "robots", content: "noindex, nofollow" },
       {
         name: "description",
         content:
           "Filtra tu historial de jornadas por rango de fechas, proyecto y días hábiles, con totales acumulados.",
       },
-      { property: "og:title", content: "Historial de horas por día · TimeFlow" },
+      { property: "og:title", content: "Historial de horas por día · Time Flow" },
       {
         property: "og:description",
         content: "Revisa horas activas, descansos y cumplimiento de meta día por día.",

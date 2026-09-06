@@ -19,13 +19,14 @@ export const Route = createFileRoute("/dashboard")({
   beforeLoad: requirePrivateSession,
   head: () => ({
     meta: [
-      { title: "Dashboard de productividad & IA · TimeFlow" },
+      { title: "Dashboard de productividad & IA · Time Flow" },
+      { name: "robots", content: "noindex, nofollow" },
       {
         name: "description",
         content:
           "KPIs de horas activas, ratio trabajo/descanso, distribución por proyecto e insights generados por IA.",
       },
-      { property: "og:title", content: "Dashboard de productividad & IA · TimeFlow" },
+      { property: "og:title", content: "Dashboard de productividad & IA · Time Flow" },
       {
         property: "og:description",
         content: "Analiza tus patrones de jornada y recibe recomendaciones personalizadas.",

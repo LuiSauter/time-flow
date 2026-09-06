@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
-import { TrackerPage } from "./index";
+import { TrackerPage } from "./app";
 
 const mocks = vi.hoisted(() => ({
   useProjects: vi.fn(),

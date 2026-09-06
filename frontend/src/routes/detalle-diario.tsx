@@ -14,13 +14,14 @@ export const Route = createFileRoute("/detalle-diario")({
   }),
   head: () => ({
     meta: [
-      { title: "Detalle de horas y descansos del día · TimeFlow" },
+      { title: "Detalle de horas y descansos del día · Time Flow" },
+      { name: "robots", content: "noindex, nofollow" },
       {
         name: "description",
         content:
           "Línea de tiempo de 24 horas con bloques de trabajo activo, descansos e inactividad del día seleccionado.",
       },
-      { property: "og:title", content: "Detalle de horas y descansos del día · TimeFlow" },
+      { property: "og:title", content: "Detalle de horas y descansos del día · Time Flow" },
       {
         property: "og:description",
         content: "Revisa y ajusta cada bloque de trabajo y descanso del día.",
